@@ -71,14 +71,22 @@ Page({
 
   // 上传图片到云存储
   async uploadImages() {
+    const validExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp']
+
     const tasks = this.data.images.map((filePath, index) => {
-      const ext = filePath.split('.').pop()
+      let ext = filePath.split('.').pop() || 'jpg'
+      ext = validExtensions.includes(ext.toLowerCase()) ? ext : 'jpg'
       const cloudPath = `order-images/${Date.now()}-${index}.${ext}`
+
       return wx.cloud.uploadFile({
         cloudPath,
         filePath
-      }).then(res => res.fileID)
+      }).then(res => res.fileID).catch(err => {
+        console.error(`上传图片 ${index + 1} 失败:`, err)
+        throw new Error(`上传图片 ${index + 1} 失败，请重试`)
+      })
     })
+
     return Promise.all(tasks)
   },
 

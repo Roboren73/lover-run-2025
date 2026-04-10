@@ -18,8 +18,17 @@ Page({
       return
     }
     const app = getApp()
-    this.sourceId = app.globalData.storeInfo.sourceId
-    this.setData({ storeName: app.globalData.storeInfo.name })
+    const storeInfo = app.globalData.storeInfo
+
+    // 防止 globalData 被重置但 localStorage 还有数据的情况
+    if (!storeInfo || !storeInfo.sourceId) {
+      auth.logout()
+      wx.redirectTo({ url: '/pages/store-login/store-login' })
+      return
+    }
+
+    this.sourceId = storeInfo.sourceId
+    this.setData({ storeName: storeInfo.name })
     this.loadOrders()
   },
 

@@ -18,11 +18,18 @@ exports.main = async (event, context) => {
 async function verifyAdmin(openId, password) {
   try {
     const res = await db.collection('admins').where({ password }).get()
+
     if (res.data.length === 0) {
       return { code: -1, message: '密码错误' }
     }
+
+    const admin = res.data[0]
+    if (!admin || !admin._id) {
+      return { code: -1, message: '管理员数据异常' }
+    }
+
     // 更新管理员的 openId（方便后续鉴权）
-    await db.collection('admins').doc(res.data[0]._id).update({
+    await db.collection('admins').doc(admin._id).update({
       data: { openId, lastLoginAt: Date.now() }
     })
     return { code: 0, message: '登录成功' }

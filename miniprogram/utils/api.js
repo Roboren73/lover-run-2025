@@ -29,8 +29,10 @@ function getOrderList(params) {
   return callCloud('order', { action: 'list', ...params })
 }
 
-function getOrderDetail(orderId) {
-  return callCloud('order', { action: 'detail', orderId })
+function getOrderDetail(orderId, role = 'user', sourceId = '') {
+  const params = { action: 'detail', orderId, role }
+  if (sourceId) params.sourceId = sourceId
+  return callCloud('order', params)
 }
 
 function updateOrderStatus(orderId, status, remark) {

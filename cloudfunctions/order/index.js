@@ -109,6 +109,11 @@ async function getOrderDetail(openId, event) {
 
   try {
     const res = await db.collection('orders').doc(orderId).get()
+
+    if (!res.data) {
+      return { code: -1, message: '订单不存在' }
+    }
+
     const order = res.data
 
     if (role === 'admin') {
