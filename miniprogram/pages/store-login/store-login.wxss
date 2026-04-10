@@ -1,0 +1,16 @@
+.login-header {
+  text-align: center;
+  padding: 60rpx 0 40rpx;
+}
+
+.login-title {
+  font-size: 44rpx;
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 16rpx;
+}
+
+.login-desc {
+  font-size: 26rpx;
+  color: #999;
+}

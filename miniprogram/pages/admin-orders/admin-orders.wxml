@@ -1,0 +1,44 @@
+<view class="container">
+  <!-- 状态筛选 -->
+  <scroll-view class="filter-bar" scroll-x>
+    <text class="filter-item {{currentStatus === '' ? 'active' : ''}}"
+      bindtap="filterStatus" data-status="">全部</text>
+    <text class="filter-item {{currentStatus === item.value ? 'active' : ''}}"
+      wx:for="{{statusOptions}}" wx:key="value"
+      bindtap="filterStatus" data-status="{{item.value}}">{{item.text}}</text>
+  </scroll-view>
+
+  <!-- 订单列表 -->
+  <view wx:if="{{orders.length === 0 && !loading}}" class="empty-state">
+    <text>暂无订单</text>
+  </view>
+
+  <view class="order-list">
+    <view class="card order-card" wx:for="{{orders}}" wx:key="_id">
+      <view class="order-header" bindtap="goDetail" data-id="{{item._id}}">
+        <text class="order-no">{{item.orderNo}}</text>
+        <text class="status-tag status-{{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="order-body" bindtap="goDetail" data-id="{{item._id}}">
+        <view class="order-info">
+          <text>手机：{{item.phone}}</text>
+        </view>
+        <view class="order-info" wx:if="{{item.name}}">
+          <text>姓名：{{item.name}}</text>
+        </view>
+        <view class="order-info" wx:if="{{item.sourceId}}">
+          <text>来源：{{item.sourceId}}</text>
+        </view>
+      </view>
+      <view class="order-footer">
+        <text class="order-time">{{item.createdAtText}}</text>
+        <view class="order-actions">
+          <text class="action-btn" bindtap="changeStatus" data-id="{{item._id}}">修改状态</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-state">加载中...</view>
+  <view wx:if="{{!hasMore && orders.length > 0}}" class="loading-state">没有更多了</view>
+</view>

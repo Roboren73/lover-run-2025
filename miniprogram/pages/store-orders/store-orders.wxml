@@ -1,0 +1,52 @@
+<view class="container">
+  <!-- 门店信息头 -->
+  <view class="store-header">
+    <view class="store-name">{{storeName}}</view>
+    <text class="logout-btn" bindtap="logout">退出</text>
+  </view>
+
+  <!-- 状态筛选 -->
+  <view class="filter-bar">
+    <text class="filter-item {{currentStatus === '' ? 'active' : ''}}"
+      bindtap="filterStatus" data-status="">全部</text>
+    <text class="filter-item {{currentStatus === 'pending' ? 'active' : ''}}"
+      bindtap="filterStatus" data-status="pending">待处理</text>
+    <text class="filter-item {{currentStatus === 'contacted' ? 'active' : ''}}"
+      bindtap="filterStatus" data-status="contacted">已联系</text>
+    <text class="filter-item {{currentStatus === 'constructing' ? 'active' : ''}}"
+      bindtap="filterStatus" data-status="constructing">施工中</text>
+    <text class="filter-item {{currentStatus === 'completed' ? 'active' : ''}}"
+      bindtap="filterStatus" data-status="completed">已完成</text>
+  </view>
+
+  <!-- 订单列表 -->
+  <view wx:if="{{orders.length === 0 && !loading}}" class="empty-state">
+    <text>暂无订单</text>
+  </view>
+
+  <view class="order-list">
+    <view class="card order-card" wx:for="{{orders}}" wx:key="_id"
+      bindtap="goDetail" data-id="{{item._id}}">
+      <view class="order-header">
+        <text class="order-no">{{item.orderNo}}</text>
+        <text class="status-tag status-{{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="order-info">
+        <text class="order-phone">手机：{{item.phone}}</text>
+      </view>
+      <view class="order-info" wx:if="{{item.name}}">
+        <text>姓名：{{item.name}}</text>
+      </view>
+      <view class="order-info" wx:if="{{item.address}}">
+        <text>地址：{{item.address}}</text>
+      </view>
+      <view class="order-footer">
+        <text class="order-time">{{item.createdAtText}}</text>
+        <text class="order-arrow">详情 ></text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-state">加载中...</view>
+  <view wx:if="{{!hasMore && orders.length > 0}}" class="loading-state">没有更多了</view>
+</view>
