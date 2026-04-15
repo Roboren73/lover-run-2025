@@ -11,25 +11,26 @@
 ## 项目结构
 
 ```
-miniprogram/           # 小程序前端
-  pages/
-    index/             # 首页（用户扫码入口）
-    submit/            # 提交报修需求
-    my-orders/         # 我的订单
-    order-detail/      # 订单详情
-    store-login/       # 门店登录
-    store-orders/      # 门店订单列表
-    admin/             # 管理后台
-    admin-orders/      # 订单管理
-    admin-sources/     # 来源管理
-  utils/
-    api.js             # 云函数调用封装
-    auth.js            # 权限与登录管理
-    util.js            # 工具函数
-cloudfunctions/        # 云函数
-  login/               # 登录 & 管理员验证
-  order/               # 订单 CRUD
-  source/              # 来源管理 & 统计
+app.js / app.json / app.wxss     # 小程序入口
+sitemap.json                     # 站点地图
+pages/                           # 所有页面
+  index/                         # 首页（用户扫码入口）
+  submit/                        # 提交报修需求
+  my-orders/                     # 我的订单
+  order-detail/                  # 订单详情
+  store-login/                   # 门店登录
+  store-orders/                  # 门店订单列表
+  admin/                         # 管理后台
+  admin-orders/                  # 订单管理
+  admin-sources/                 # 来源管理
+utils/                           # 工具模块
+  api.js                         # 云函数调用封装
+  auth.js                        # 权限与登录管理
+  util.js                        # 工具函数
+cloudfunctions/                  # 云函数
+  login/                         # 登录 & 管理员验证
+  order/                         # 订单 CRUD
+  source/                        # 来源管理 & 统计
 ```
 
 ## 快速开始
