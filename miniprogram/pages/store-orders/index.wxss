@@ -1,0 +1,16 @@
+.page { background: #f2f2f2; min-height: 100vh; }
+.hero { background: #ffd400; padding: 32rpx 24rpx 48rpx; }
+.title { font-size: 52rpx; font-weight: 700; margin-bottom: 20rpx; }
+.store { font-size: 40rpx; font-weight: 600; }
+.sub { margin-top: 8rpx; color: #333; }
+.card { background: #fff; border-radius: 20rpx; margin: -20rpx 24rpx 24rpx; padding: 20rpx; }
+.card-head { display:flex; justify-content:space-between; align-items:center; margin-bottom: 16rpx; }
+.card-title { font-size: 36rpx; font-weight: 700; }
+.card-all,.filter { font-size: 24rpx; color:#666; }
+.grid { display:grid; grid-template-columns: repeat(3,1fr); border:1rpx solid #eee; }
+.cell { border:1rpx solid #eee; min-height:120rpx; display:flex; align-items:center; justify-content:center; position:relative; background:#fff; }
+.cell-active { background: #fff6bf; }
+.badge { position:absolute; right:10rpx; top:10rpx; background:#f5222d; color:#fff; border-radius:20rpx; padding:2rpx 12rpx; font-size:22rpx; }
+.label { font-size: 32rpx; }
+.order { display:flex; justify-content:space-between; padding:20rpx 0; border-bottom:1rpx solid #f0f0f0; }
+.empty { color:#888; padding: 20rpx 0; text-align:center; }

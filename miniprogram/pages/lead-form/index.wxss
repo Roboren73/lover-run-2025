@@ -1,0 +1,8 @@
+input, textarea { border: 1px solid #ddd; border-radius: 8rpx; margin: 12rpx 0; padding: 16rpx; }
+button { margin-top: 16rpx; }
+.image-list { margin-top: 12rpx; }
+.image-item { display: flex; justify-content: space-between; align-items: center; margin: 8rpx 0; }
+.image-id { font-size: 22rpx; color: #666; width: 520rpx; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.agree{font-size:24rpx;color:#444;display:flex;align-items:center;gap:8rpx;flex-wrap:wrap}
+.link{color:#1677ff}

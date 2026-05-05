@@ -1,0 +1,18 @@
+<view class="container" wx:if="{{item}}">
+  <view class="card">
+    <view>手机号：{{item.phoneMasked}}</view>
+    <view>姓名：{{item.name || '未填写'}}</view>
+    <view>地址：{{item.address || '未填写'}}</view>
+    <view>描述：{{item.description || '未填写'}}</view>
+    <view>图片：</view>
+    <view class="img-list">
+      <block wx:for="{{item.images || []}}" wx:key="*this">
+        <image class="img" src="{{item}}" mode="aspectFill" data-url="{{item}}" bindtap="previewImage" />
+      </block>
+      <view wx:if="{{!(item.images && item.images.length)}}">未上传</view>
+    </view>
+    <view>状态：{{item.displayStatus}}</view>
+    <view>创建时间：{{item.createdAtText}}</view>
+    <view>更新时间：{{item.updatedAtText}}</view>
+  </view>
+</view>

@@ -1,0 +1,49 @@
+<svg width="390" height="844" viewBox="0 0 390 844" xmlns="http://www.w3.org/2000/svg">
+  <rect width="390" height="844" fill="#f2f2f2"/>
+  <rect x="0" y="0" width="390" height="230" fill="#FFD400"/>
+  <text x="16" y="56" font-size="22" font-weight="700" fill="#111">商家中心</text>
+  <text x="16" y="96" font-size="18" fill="#111">皇宅海南防水维修中心（海口店）</text>
+  <text x="16" y="124" font-size="14" fill="#333">来源ID: store_demo_001</text>
+
+  <rect x="14" y="180" rx="12" ry="12" width="362" height="300" fill="#fff"/>
+  <text x="28" y="214" font-size="18" font-weight="700">订单中心</text>
+  <text x="280" y="214" font-size="14" fill="#666">全部订单 213</text>
+
+  <g font-size="15" fill="#111" text-anchor="middle">
+    <rect x="20" y="230" width="115" height="75" fill="#fafafa" stroke="#ececec"/>
+    <text x="77" y="275">待接单</text>
+    <rect x="136" y="230" width="115" height="75" fill="#fafafa" stroke="#ececec"/>
+    <text x="194" y="275">待勘查</text>
+    <rect x="252" y="230" width="115" height="75" fill="#fafafa" stroke="#ececec"/>
+    <text x="309" y="275">已勘查</text>
+
+    <rect x="20" y="306" width="115" height="75" fill="#fafafa" stroke="#ececec"/>
+    <text x="77" y="351">施工中</text>
+    <rect x="136" y="306" width="115" height="75" fill="#fafafa" stroke="#ececec"/>
+    <text x="194" y="351">已完工</text>
+    <rect x="252" y="306" width="115" height="75" fill="#fafafa" stroke="#ececec"/>
+    <text x="309" y="351">已完成</text>
+
+    <rect x="20" y="382" width="115" height="75" fill="#fafafa" stroke="#ececec"/>
+    <text x="77" y="427">已关闭</text>
+  </g>
+
+  <g font-size="12" text-anchor="middle" fill="#fff">
+    <rect x="103" y="236" width="26" height="16" rx="8" fill="#f5222d"/><text x="116" y="248">1</text>
+    <rect x="219" y="236" width="30" height="16" rx="8" fill="#f5222d"/><text x="234" y="248">81</text>
+    <rect x="335" y="236" width="26" height="16" rx="8" fill="#f5222d"/><text x="348" y="248">1</text>
+    <rect x="103" y="312" width="26" height="16" rx="8" fill="#f5222d"/><text x="116" y="324">2</text>
+    <rect x="100" y="388" width="34" height="16" rx="8" fill="#f5222d"/><text x="117" y="400">129</text>
+  </g>
+
+  <rect x="14" y="496" rx="12" ry="12" width="362" height="180" fill="#fff"/>
+  <text x="28" y="528" font-size="18" font-weight="700">最新订单</text>
+  <text x="28" y="560" font-size="14">138****5678</text><text x="300" y="560" font-size="13" fill="#666">NEW</text>
+  <line x1="24" y1="570" x2="366" y2="570" stroke="#efefef"/>
+  <text x="28" y="598" font-size="14">139****1122</text><text x="258" y="598" font-size="13" fill="#666">FOLLOWING</text>
+  <line x1="24" y1="608" x2="366" y2="608" stroke="#efefef"/>
+  <text x="28" y="636" font-size="14">137****8899</text><text x="286" y="636" font-size="13" fill="#666">CLOSED</text>
+
+  <rect x="14" y="760" rx="24" ry="24" width="362" height="52" fill="#FFD400"/>
+  <text x="195" y="793" text-anchor="middle" font-size="18" fill="#111">退出登录</text>
+</svg>

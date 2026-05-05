@@ -1,0 +1,10 @@
+{
+  "name": "gan-kuaikuai-mvp",
+  "private": true,
+  "scripts": {
+    "test": "node tests/helpers.test.js && node tests/status.test.js && node tests/format.test.js && node tests/release-check.test.js",
+    "check": "node --check cloudfunctions/api/src/index.js && node --check miniprogram/app.js",
+    "release:check": "node scripts/check-ready.js",
+    "release:apply": "node scripts/apply-release-config.js"
+  }
+}

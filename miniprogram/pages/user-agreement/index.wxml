@@ -1,0 +1,9 @@
+<view class="container">
+  <view class="card">
+    <view class="title">用户服务协议</view>
+    <view>1. 您提交的信息将用于渗漏/堵漏服务咨询与回访。</view>
+    <view>2. 请确保提交手机号真实有效，以便客服联系。</view>
+    <view>3. 禁止提交违法、侵权或虚假内容。</view>
+    <view>4. 平台可在必要时更新协议并在小程序公示。</view>
+  </view>
+</view>

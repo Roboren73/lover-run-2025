@@ -1,0 +1,11 @@
+<view class="container">
+  <view class="card">
+    <view class="title">来源管理</view>
+    <input placeholder="来源ID（如 store_hk_001）" bindinput="onSourceInput" value="{{sourceId}}" />
+    <input placeholder="来源名称（如 海口门店）" bindinput="onNameInput" value="{{name}}" />
+    <button bindtap="createSource">创建来源</button>
+    <button bindtap="genQrcode">生成固定二维码</button>
+    <view wx:if="{{created}}" class="hint">来源创建成功，可生成/分发二维码。</view>
+    <view wx:if="{{qrImage}}" class="hint">二维码已生成（buffer），请在云端转临时文件后下载/保存。</view>
+  </view>
+</view>
