@@ -1,0 +1,4 @@
+.title{font-size:34rpx;font-weight:700;margin-bottom:16rpx}
+input{border:1px solid #ddd;border-radius:8rpx;padding:14rpx;margin-bottom:12rpx}
+button{margin-bottom:12rpx}
+.hint{font-size:24rpx;color:#666}

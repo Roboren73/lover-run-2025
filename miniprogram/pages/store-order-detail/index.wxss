@@ -1,0 +1,2 @@
+.img-list { display:flex; flex-wrap:wrap; gap:12rpx; margin:8rpx 0 16rpx; }
+.img { width:140rpx; height:140rpx; border-radius:8rpx; background:#f5f5f5; }

@@ -1,0 +1,22 @@
+<view class="container">
+  <view class="card">
+    <picker mode="selector" range="{{statusOptions}}" value="{{statusIndex}}" bindchange="onStatusChange">
+      <view class="picker">状态筛选：{{status || '全部'}}</view>
+    </picker>
+    <input placeholder="按来源ID筛选" value="{{sourceId}}" bindinput="onSourceInput" />
+    <view class="actions">
+      <button bindtap="search">查询</button>
+      <button bindtap="resetFilter">重置</button>
+    </view>
+  </view>
+
+  <view class="card" wx:if="{{loading}}">加载中...</view>
+  <block wx:for="{{list}}" wx:key="_id">
+    <view class="card" data-id="{{item._id}}" bindtap="goDetail">
+      <view>{{item.phone}} - {{item.displayStatus}}</view>
+      <view>来源：{{item.sourceId}}</view>
+    </view>
+  </block>
+
+  <button bindtap="loadMore">加载更多</button>
+</view>

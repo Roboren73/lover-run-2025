@@ -1,0 +1,39 @@
+<view class="page">
+  <view class="hero">
+    <view class="title">商家中心</view>
+    <view class="store">{{dashboard.storeName}}</view>
+    <view class="sub">来源ID：{{dashboard.sourceId}}</view>
+  </view>
+
+  <view class="card">
+    <view class="card-head">
+      <text class="card-title">订单中心</text>
+      <text class="card-all">全部订单 {{dashboard.total}}</text>
+    </view>
+
+    <view class="grid">
+      <block wx:for="{{cells}}" wx:key="status">
+        <view class="cell {{activeStatus===item.status?'cell-active':''}}" data-status="{{item.displayStatus}}" bindtap="onStatusTap">
+          <view class="badge" wx:if="{{item.count>0}}">{{item.count}}</view>
+          <view class="label">{{item.label}}</view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-head">
+      <view class="card-title">最新订单</view>
+      <view wx:if="{{activeStatus}}" class="filter" bindtap="clearFilter">筛选：{{activeStatus}}（清除）</view>
+    </view>
+
+    <view wx:if="{{loading}}" class="empty">加载中...</view>
+    <view wx:elif="{{list.length===0}}" class="empty">暂无订单</view>
+    <block wx:else wx:for="{{list}}" wx:key="_id">
+      <view class="order" data-id="{{item._id}}" bindtap="goDetail">
+        <text>{{item.phoneMasked}}</text>
+        <text>{{item.displayStatus}}</text>
+      </view>
+    </block>
+  </view>
+</view>

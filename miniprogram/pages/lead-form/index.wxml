@@ -1,0 +1,32 @@
+<view class="container">
+  <view class="card">
+    <view>来源ID：{{sourceId || '未识别'}}</view>
+    <input placeholder="手机号（必填）" data-key="phone" bindinput="onInput" maxlength="11" />
+    <input placeholder="姓名（可选）" data-key="name" bindinput="onInput" />
+    <input placeholder="地址（可选）" data-key="address" bindinput="onInput" />
+    <textarea placeholder="问题描述（可选）" data-key="description" bindinput="onInput" />
+
+    <button bindtap="chooseImages">上传现场图片（可选）</button>
+    <view class="image-list">
+      <block wx:for="{{form.images}}" wx:key="*this">
+        <view class="image-item">
+          <text class="image-id">{{item}}</text>
+          <button size="mini" data-idx="{{index}}" bindtap="removeImage">删除</button>
+        </view>
+      </block>
+    </view>
+
+
+    <checkbox-group bindchange="toggleAgree">
+      <label class="agree">
+        <checkbox value="yes" />
+        我已阅读并同意
+        <text class="link" bindtap="goAgreement">《用户服务协议》</text>
+        与
+        <text class="link" bindtap="goPrivacy">《隐私政策》</text>
+      </label>
+    </checkbox-group>
+
+    <button class="btn-primary" loading="{{submitting}}" bindtap="submit">提交需求</button>
+  </view>
+</view>

@@ -1,0 +1,9 @@
+<view class="page">
+  <view class="card">
+    <view class="ok">✓</view>
+    <view class="title">提交成功</view>
+    <view class="desc">我们已收到您的需求，客服将尽快联系您。</view>
+    <button class="btn-primary" bindtap="toHome">返回首页</button>
+    <button class="btn-ghost" bindtap="callService">联系客服</button>
+  </view>
+</view>

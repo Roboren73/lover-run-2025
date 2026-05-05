@@ -1,0 +1,24 @@
+{
+  "pages": [
+    "pages/lead-form/index",
+    "pages/success/index",
+    "pages/store-orders/index",
+    "pages/store-order-detail/index",
+    "pages/admin-dashboard/index",
+    "pages/admin-orders/index",
+    "pages/admin-order-detail/index",
+    "pages/admin-sources/index",
+    "pages/privacy-policy/index",
+    "pages/user-agreement/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "干快快",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "requiredPrivateInfos": [
+    "getLocation"
+  ]
+}

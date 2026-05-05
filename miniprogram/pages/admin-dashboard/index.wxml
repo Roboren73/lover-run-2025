@@ -1,0 +1,36 @@
+<view class="page">
+  <view class="hero">
+    <view class="title">管理后台</view>
+    <view class="sub">订单总量：{{total}}</view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">状态分布</view>
+    <view class="grid">
+      <block wx:for="{{statusCards}}" wx:key="status">
+        <view class="cell">
+          <view class="count">{{item.count}}</view>
+          <view class="label">{{item.status}}</view>
+        </view>
+      </block>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">来源Top10</view>
+    <block wx:for="{{topSources}}" wx:key="sourceId">
+      <view class="row">
+        <text>{{item.sourceName}}</text>
+        <text>{{item.orderCount}}</text>
+      </view>
+    </block>
+    <button class="action" bindtap="goSources">来源管理 / 二维码</button>
+  </view>
+
+  <view class="card">
+    <view class="card-title">操作日志（最近200条）</view>
+    <view class="row"><text>总数</text><text>{{logs.total}}</text></view>
+    <view class="row"><text>最近时间</text><text>{{logs.latestAtText}}</text></view>
+    <view class="log-text">{{logs.byEventText || '暂无日志'}}</view>
+  </view>
+</view>

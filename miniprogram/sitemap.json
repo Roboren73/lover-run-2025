@@ -1,0 +1,9 @@
+{
+  "desc": "干快快 sitemap",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

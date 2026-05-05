@@ -1,0 +1,16 @@
+{
+  "miniprogramRoot": "./",
+  "projectname": "gan-kuaikuai",
+  "description": "建筑渗漏堵漏获客MVP",
+  "appid": "wxd77aeec77df9af5e",
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.3.5"
+}
