@@ -1,0 +1,28 @@
+<view class="container">
+  <view wx:if="{{orders.length === 0 && !loading}}" class="empty-state">
+    <text>暂无订单记录</text>
+  </view>
+
+  <view class="order-list">
+    <view class="card order-card" wx:for="{{orders}}" wx:key="_id"
+      bindtap="goDetail" data-id="{{item._id}}">
+      <view class="order-header">
+        <text class="order-no">{{item.orderNo}}</text>
+        <text class="status-tag status-{{item.status}}">{{item.statusText}}</text>
+      </view>
+      <view class="order-info">
+        <text class="order-phone">手机：{{item.phone}}</text>
+      </view>
+      <view class="order-info" wx:if="{{item.address}}">
+        <text>地址：{{item.address}}</text>
+      </view>
+      <view class="order-footer">
+        <text class="order-time">{{item.createdAtText}}</text>
+        <text class="order-arrow">查看详情 ></text>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{loading}}" class="loading-state">加载中...</view>
+  <view wx:if="{{!hasMore && orders.length > 0}}" class="loading-state">没有更多了</view>
+</view>

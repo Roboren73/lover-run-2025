@@ -1,0 +1,76 @@
+<view class="container">
+  <!-- 添加按钮 -->
+  <button class="btn-primary add-btn" bindtap="toggleAddForm">
+    {{showAddForm ? '取消' : '+ 新增来源'}}
+  </button>
+
+  <!-- 新增表单 -->
+  <view class="card" wx:if="{{showAddForm}}">
+    <view class="section-title">新增来源</view>
+    <view class="form-item">
+      <text class="form-label"><text class="required">*</text>来源标识</text>
+      <input class="form-input" type="text"
+        placeholder="如 STORE001（用于二维码）"
+        value="{{newSourceId}}" bindinput="onNewSourceIdInput" />
+    </view>
+    <view class="form-item">
+      <text class="form-label"><text class="required">*</text>名称</text>
+      <input class="form-input" type="text"
+        placeholder="门店或推荐人名称"
+        value="{{newName}}" bindinput="onNewNameInput" />
+    </view>
+    <view class="form-item">
+      <text class="form-label">联系电话</text>
+      <input class="form-input" type="number"
+        placeholder="门店联系电话"
+        value="{{newContactPhone}}" bindinput="onNewPhoneInput" />
+    </view>
+    <view class="form-item">
+      <text class="form-label">类型</text>
+      <radio-group bindchange="onTypeChange">
+        <label class="radio-label">
+          <radio value="0" checked="{{newType === 'store'}}" />门店
+        </label>
+        <label class="radio-label">
+          <radio value="1" checked="{{newType === 'referrer'}}" />推荐人
+        </label>
+      </radio-group>
+    </view>
+    <button class="btn-primary" bindtap="addSource" disabled="{{adding}}">
+      {{adding ? '创建中...' : '创建'}}
+    </button>
+  </view>
+
+  <!-- 来源列表 -->
+  <view wx:if="{{loading}}" class="loading-state">加载中...</view>
+
+  <view wx:if="{{sources.length === 0 && !loading}}" class="empty-state">
+    <text>暂无来源，请点击上方按钮添加</text>
+  </view>
+
+  <view class="card source-card" wx:for="{{sources}}" wx:key="_id">
+    <view class="source-header">
+      <view class="source-name-row">
+        <text class="source-name">{{item.name}}</text>
+        <text class="source-type-tag {{item.type}}">{{item.type === 'store' ? '门店' : '推荐人'}}</text>
+      </view>
+      <text class="source-status {{item.status}}">{{item.status === 'active' ? '启用' : '禁用'}}</text>
+    </view>
+    <view class="source-info">
+      <text class="source-info-row">编号：{{item.sourceId}}</text>
+      <text class="source-info-row">验证码：{{item.authCode}}</text>
+      <text class="source-info-row" wx:if="{{item.contactPhone}}">电话：{{item.contactPhone}}</text>
+      <text class="source-info-row">创建时间：{{item.createdAtText}}</text>
+    </view>
+    <view class="source-actions">
+      <text class="action-link primary" bindtap="genQRCode" data-sourceid="{{item.sourceId}}">
+        {{generatingId === item.sourceId ? '生成中...' : '生成小程序码'}}
+      </text>
+      <text class="action-link" bindtap="copySourceInfo" data-item="{{item}}">复制信息</text>
+      <text class="action-link {{item.status === 'active' ? 'warn' : 'success'}}"
+        bindtap="toggleStatus" data-id="{{item._id}}" data-status="{{item.status}}">
+        {{item.status === 'active' ? '禁用' : '启用'}}
+      </text>
+    </view>
+  </view>
+</view>

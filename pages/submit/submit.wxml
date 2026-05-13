@@ -1,0 +1,58 @@
+<view class="container">
+  <view class="card">
+    <view class="section-title">报修信息</view>
+
+    <!-- 手机号（必填） -->
+    <view class="form-item">
+      <text class="form-label"><text class="required">*</text>手机号</text>
+      <input class="form-input" type="number" maxlength="11"
+        placeholder="请输入您的手机号"
+        value="{{phone}}" bindinput="onPhoneInput" />
+    </view>
+
+    <!-- 姓名（可选） -->
+    <view class="form-item">
+      <text class="form-label">姓名</text>
+      <input class="form-input" type="text"
+        placeholder="请输入您的姓名（选填）"
+        value="{{name}}" bindinput="onNameInput" />
+    </view>
+
+    <!-- 地址（可选） -->
+    <view class="form-item">
+      <text class="form-label">地址</text>
+      <input class="form-input" type="text"
+        placeholder="请输入维修地址（选填）"
+        value="{{address}}" bindinput="onAddressInput" />
+    </view>
+
+    <!-- 问题描述（可选） -->
+    <view class="form-item">
+      <text class="form-label">问题描述</text>
+      <textarea class="form-textarea"
+        placeholder="请描述漏水情况，例如：卫生间天花板渗水（选填）"
+        value="{{description}}" bindinput="onDescInput" />
+    </view>
+
+    <!-- 图片上传（可选） -->
+    <view class="form-item">
+      <text class="form-label">现场照片（选填，最多{{maxImages}}张）</text>
+      <view class="image-list">
+        <view class="image-item" wx:for="{{images}}" wx:key="*this">
+          <image class="preview-img" src="{{item}}" mode="aspectFill"
+            bindtap="previewImage" data-url="{{item}}" />
+          <view class="image-delete" bindtap="removeImage" data-index="{{index}}">×</view>
+        </view>
+        <view class="image-add" bindtap="chooseImage" wx:if="{{images.length < maxImages}}">
+          <text class="add-icon">+</text>
+          <text class="add-text">添加照片</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <button class="btn-primary" bindtap="submit"
+    disabled="{{submitting}}">
+    {{submitting ? '提交中...' : '提交报修'}}
+  </button>
+</view>

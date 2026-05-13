@@ -1,0 +1,148 @@
+.hero {
+  text-align: center;
+  padding: 60rpx 30rpx 50rpx;
+  background: linear-gradient(135deg, #1890ff 0%, #096dd9 100%);
+  border-radius: 0 0 40rpx 40rpx;
+  margin: -30rpx -30rpx 30rpx;
+  color: #fff;
+}
+
+.hero-icon {
+  font-size: 80rpx;
+  margin-bottom: 16rpx;
+}
+
+.hero-title {
+  font-size: 56rpx;
+  font-weight: bold;
+  margin-bottom: 12rpx;
+}
+
+.hero-subtitle {
+  font-size: 32rpx;
+  opacity: 0.9;
+  margin-bottom: 8rpx;
+}
+
+.hero-desc {
+  font-size: 26rpx;
+  opacity: 0.7;
+}
+
+.service-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.service-item {
+  width: 48%;
+  display: flex;
+  align-items: center;
+  padding: 20rpx 0;
+}
+
+.service-icon {
+  font-size: 40rpx;
+  margin-right: 16rpx;
+}
+
+.service-text {
+  font-size: 28rpx;
+  color: #333;
+}
+
+.step-list {
+  padding: 0;
+}
+
+.step-item {
+  display: flex;
+  align-items: flex-start;
+  padding: 20rpx 0;
+  position: relative;
+}
+
+.step-item:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: 30rpx;
+  top: 70rpx;
+  bottom: -10rpx;
+  width: 2rpx;
+  background-color: #e8e8e8;
+}
+
+.step-num {
+  width: 60rpx;
+  height: 60rpx;
+  border-radius: 50%;
+  background-color: #1890ff;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: bold;
+  flex-shrink: 0;
+  margin-right: 20rpx;
+}
+
+.step-info {
+  flex: 1;
+  padding-top: 4rpx;
+}
+
+.step-title {
+  font-size: 30rpx;
+  font-weight: bold;
+  color: #333;
+  display: block;
+  margin-bottom: 6rpx;
+}
+
+.step-desc {
+  font-size: 24rpx;
+  color: #999;
+  display: block;
+}
+
+.action-area {
+  margin-top: 20rpx;
+  margin-bottom: 20rpx;
+}
+
+.btn-large {
+  height: 96rpx;
+  line-height: 96rpx;
+  font-size: 36rpx;
+  font-weight: bold;
+  border-radius: 48rpx;
+}
+
+.sub-actions {
+  text-align: center;
+  margin-top: 24rpx;
+}
+
+.sub-link {
+  font-size: 28rpx;
+  color: #1890ff;
+}
+
+.footer-links {
+  text-align: center;
+  padding: 40rpx 0 20rpx;
+  font-size: 24rpx;
+  color: #999;
+}
+
+.footer-link {
+  color: #999;
+  padding: 10rpx 20rpx;
+}
+
+.footer-divider {
+  color: #ddd;
+  margin: 0 10rpx;
+}

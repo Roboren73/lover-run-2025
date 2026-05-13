@@ -1,0 +1,26 @@
+<view class="container">
+  <view class="login-header">
+    <view class="login-title">门店登录</view>
+    <view class="login-desc">请输入管理员分配的门店编号和验证码</view>
+  </view>
+
+  <view class="card">
+    <view class="form-item">
+      <text class="form-label">门店编号</text>
+      <input class="form-input" type="text"
+        placeholder="请输入门店编号"
+        value="{{sourceId}}" bindinput="onSourceIdInput" />
+    </view>
+
+    <view class="form-item">
+      <text class="form-label">验证码</text>
+      <input class="form-input" type="text" password
+        placeholder="请输入验证码"
+        value="{{authCode}}" bindinput="onAuthCodeInput" />
+    </view>
+  </view>
+
+  <button class="btn-primary" bindtap="login" disabled="{{logging}}">
+    {{logging ? '登录中...' : '登录'}}
+  </button>
+</view>

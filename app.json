@@ -1,0 +1,23 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/submit/submit",
+    "pages/my-orders/my-orders",
+    "pages/order-detail/order-detail",
+    "pages/store-login/store-login",
+    "pages/store-orders/store-orders",
+    "pages/admin/admin",
+    "pages/admin-orders/admin-orders",
+    "pages/admin-sources/admin-sources"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#1890ff",
+    "navigationBarTitleText": "干快快",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f5f5",
+    "backgroundTextStyle": "dark"
+  },
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "style": "v2"
+}

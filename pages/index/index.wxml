@@ -1,0 +1,82 @@
+<view class="container">
+  <!-- 头部 Banner -->
+  <view class="hero">
+    <view class="hero-icon">🔧</view>
+    <view class="hero-title">干快快</view>
+    <view class="hero-subtitle">专业建筑渗漏维修服务</view>
+    <view class="hero-desc">漏水不用愁，干快快帮你修</view>
+  </view>
+
+  <!-- 服务亮点 -->
+  <view class="card">
+    <view class="section-title">我们的服务</view>
+    <view class="service-list">
+      <view class="service-item">
+        <text class="service-icon">🏠</text>
+        <text class="service-text">屋面防水</text>
+      </view>
+      <view class="service-item">
+        <text class="service-icon">🚿</text>
+        <text class="service-text">卫生间堵漏</text>
+      </view>
+      <view class="service-item">
+        <text class="service-icon">🏗️</text>
+        <text class="service-text">外墙渗漏</text>
+      </view>
+      <view class="service-item">
+        <text class="service-icon">🏢</text>
+        <text class="service-text">地下室防水</text>
+      </view>
+    </view>
+  </view>
+
+  <!-- 流程说明 -->
+  <view class="card">
+    <view class="section-title">服务流程</view>
+    <view class="step-list">
+      <view class="step-item">
+        <view class="step-num">1</view>
+        <view class="step-info">
+          <text class="step-title">提交需求</text>
+          <text class="step-desc">填写手机号，描述漏水问题</text>
+        </view>
+      </view>
+      <view class="step-item">
+        <view class="step-num">2</view>
+        <view class="step-info">
+          <text class="step-title">专人联系</text>
+          <text class="step-desc">工程师主动联系沟通方案</text>
+        </view>
+      </view>
+      <view class="step-item">
+        <view class="step-num">3</view>
+        <view class="step-info">
+          <text class="step-title">上门勘察</text>
+          <text class="step-desc">免费上门查看漏水情况</text>
+        </view>
+      </view>
+      <view class="step-item">
+        <view class="step-num">4</view>
+        <view class="step-info">
+          <text class="step-title">施工修复</text>
+          <text class="step-desc">专业施工，质保无忧</text>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <!-- 提交按钮 -->
+  <view class="action-area">
+    <button class="btn-primary btn-large" bindtap="goSubmit">立即报修</button>
+    <view class="sub-actions">
+      <text class="sub-link" bindtap="goMyOrders">查看我的订单</text>
+    </view>
+  </view>
+
+  <!-- 底部入口 -->
+  <view class="footer-links">
+    <text class="footer-link" bindtap="goStore">门店入口</text>
+    <text class="footer-divider">|</text>
+    <text class="footer-link" bindtap="goAdmin">管理入口</text>
+  </view>
+</view>

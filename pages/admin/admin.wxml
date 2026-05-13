@@ -1,0 +1,74 @@
+<view class="container">
+  <!-- 未登录：输入密码 -->
+  <block wx:if="{{!isLoggedIn}}">
+    <view class="login-header">
+      <view class="login-title">管理后台</view>
+      <view class="login-desc">请输入管理员密码</view>
+    </view>
+
+    <view class="card">
+      <view class="form-item">
+        <text class="form-label">管理密码</text>
+        <input class="form-input" type="text" password
+          placeholder="请输入管理密码"
+          value="{{password}}" bindinput="onPasswordInput" />
+      </view>
+    </view>
+
+    <button class="btn-primary" bindtap="login" disabled="{{logging}}">
+      {{logging ? '登录中...' : '登录'}}
+    </button>
+  </block>
+
+  <!-- 已登录：仪表盘 -->
+  <block wx:if="{{isLoggedIn}}">
+    <view class="admin-header">
+      <text class="admin-title">管理后台</text>
+      <text class="logout-btn" bindtap="logout">退出</text>
+    </view>
+
+    <!-- 统计卡片 -->
+    <view class="card stats-card" wx:if="{{stats}}">
+      <view class="section-title">数据概览</view>
+      <view class="stats-row">
+        <view class="stat-item">
+          <text class="stat-num">{{stats.totalOrders}}</text>
+          <text class="stat-label">总订单数</text>
+        </view>
+        <view class="stat-item">
+          <text class="stat-num">{{stats.sourceStats.length}}</text>
+          <text class="stat-label">来源渠道数</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 来源统计 -->
+    <view class="card" wx:if="{{stats && stats.sourceStats.length > 0}}">
+      <view class="section-title">来源统计</view>
+      <view class="source-stat-item" wx:for="{{stats.sourceStats}}" wx:key="sourceId">
+        <view class="source-stat-left">
+          <text class="source-stat-name">{{item.name}}</text>
+          <text class="source-stat-id">{{item.sourceId}}</text>
+        </view>
+        <view class="source-stat-right">
+          <text class="source-stat-total">{{item.totalOrders}} 单</text>
+          <text class="source-stat-done">已完成 {{item.completedOrders}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view wx:if="{{loadingStats}}" class="loading-state">加载中...</view>
+
+    <!-- 操作入口 -->
+    <view class="action-list">
+      <view class="card action-item" bindtap="goOrders">
+        <text class="action-text">订单管理</text>
+        <text class="action-arrow">></text>
+      </view>
+      <view class="card action-item" bindtap="goSources">
+        <text class="action-text">来源管理</text>
+        <text class="action-arrow">></text>
+      </view>
+    </view>
+  </block>
+</view>
