@@ -63,6 +63,9 @@
       <text class="source-info-row">创建时间：{{item.createdAtText}}</text>
     </view>
     <view class="source-actions">
+      <text class="action-link primary" bindtap="genQRCode" data-sourceid="{{item.sourceId}}">
+        {{generatingId === item.sourceId ? '生成中...' : '生成小程序码'}}
+      </text>
       <text class="action-link" bindtap="copySourceInfo" data-item="{{item}}">复制信息</text>
       <text class="action-link {{item.status === 'active' ? 'warn' : 'success'}}"
         bindtap="toggleStatus" data-id="{{item._id}}" data-status="{{item.status}}">

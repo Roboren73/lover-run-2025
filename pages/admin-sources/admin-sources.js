@@ -11,7 +11,8 @@ Page({
     newName: '',
     newContactPhone: '',
     newType: 'store',
-    adding: false
+    adding: false,
+    generatingId: ''
   },
 
   onLoad() {
@@ -97,7 +98,6 @@ Page({
     })
   },
 
-  // 切换来源状态
   toggleStatus(e) {
     const { id, status } = e.currentTarget.dataset
     const newStatus = status === 'active' ? 'disabled' : 'active'
@@ -110,7 +110,6 @@ Page({
     })
   },
 
-  // 复制来源信息
   copySourceInfo(e) {
     const item = e.currentTarget.dataset.item
     const text = `门店编号: ${item.sourceId}\n验证码: ${item.authCode}\n小程序路径: pages/index/index?sourceId=${item.sourceId}`
@@ -119,6 +118,48 @@ Page({
       success: () => {
         wx.showToast({ title: '已复制到剪贴板', icon: 'success' })
       }
+    })
+  },
+
+  // 生成小程序码
+  genQRCode(e) {
+    const sourceId = e.currentTarget.dataset.sourceid
+    if (!sourceId) return
+
+    this.setData({ generatingId: sourceId })
+    wx.showLoading({ title: '生成中...' })
+
+    api.genQRCode(sourceId).then(res => {
+      wx.hideLoading()
+      this.setData({ generatingId: '' })
+
+      const fileID = res.data.fileID
+
+      // 获取临时链接用于预览和保存
+      wx.cloud.getTempFileURL({
+        fileList: [fileID],
+        success: tmpRes => {
+          if (tmpRes.fileList && tmpRes.fileList[0]) {
+            const tempUrl = tmpRes.fileList[0].tempFileURL
+            // 预览图片，长按可保存
+            wx.previewImage({
+              current: tempUrl,
+              urls: [tempUrl]
+            })
+          }
+        },
+        fail: () => {
+          wx.showToast({ title: '获取图片链接失败', icon: 'none' })
+        }
+      })
+    }).catch(err => {
+      wx.hideLoading()
+      this.setData({ generatingId: '' })
+      wx.showModal({
+        title: '生成失败',
+        content: err.message || '请稍后重试',
+        showCancel: false
+      })
     })
   }
 })

@@ -60,6 +60,10 @@ function getSourceStats() {
   return callCloud('source', { action: 'stats' })
 }
 
+function genQRCode(sourceId) {
+  return callCloud('source', { action: 'genCode', sourceId })
+}
+
 // ========== 管理员 ==========
 function verifyAdmin(password) {
   return callCloud('login', { action: 'verifyAdmin', password })
@@ -76,5 +80,6 @@ module.exports = {
   updateSource,
   verifyStore,
   getSourceStats,
+  genQRCode,
   verifyAdmin
 }

@@ -75,6 +75,11 @@
 .action-link {
   font-size: 26rpx;
   color: #1890ff;
+  flex-shrink: 0;
+}
+
+.action-link.primary {
+  font-weight: bold;
 }
 
 .action-link.warn {

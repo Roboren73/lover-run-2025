@@ -18,6 +18,8 @@ exports.main = async (event, context) => {
       return verifyStore(event)
     case 'stats':
       return getStats(OPENID)
+    case 'genCode':
+      return genQRCode(OPENID, event)
     default:
       return { code: -1, message: '未知操作' }
   }
@@ -50,7 +52,6 @@ async function createSource(openId, event) {
     return { code: -1, message: '来源标识和名称为必填项' }
   }
 
-  // 检查 sourceId 唯一性
   const existing = await db.collection('sources').where({ sourceId }).count()
   if (existing.total > 0) {
     return { code: -1, message: '来源标识已存在' }
@@ -136,7 +137,6 @@ async function getStats(openId) {
   if (!isAdmin) return { code: -1, message: '无权限' }
 
   try {
-    // 获取所有来源
     const sources = await db.collection('sources').get()
     const stats = []
 
@@ -158,7 +158,6 @@ async function getStats(openId) {
       })
     }
 
-    // 总订单数
     const totalOrders = await db.collection('orders').count()
 
     return {
@@ -170,6 +169,53 @@ async function getStats(openId) {
     }
   } catch (err) {
     return { code: -1, message: '统计失败: ' + err.message }
+  }
+}
+
+// 生成小程序码（管理员）
+async function genQRCode(openId, event) {
+  const isAdmin = await checkAdmin(openId)
+  if (!isAdmin) return { code: -1, message: '无权限' }
+
+  const { sourceId } = event
+  if (!sourceId) return { code: -1, message: '缺少来源标识' }
+
+  try {
+    // 使用云调用生成小程序码
+    // scene 参数最长 32 字符，用 s= 前缀传递 sourceId
+    const result = await cloud.openapi.wxacode.getUnlimited({
+      scene: 's=' + sourceId,
+      page: 'pages/index/index',
+      width: 430,
+      autoColor: false,
+      lineColor: { r: 24, g: 144, b: 255 },
+      isHyaline: false
+    })
+
+    if (result.errCode !== 0 && result.errCode !== undefined) {
+      return { code: -1, message: '生成失败: ' + (result.errMsg || '未知错误') }
+    }
+
+    // 将图片 buffer 上传到云存储
+    const uploadResult = await cloud.uploadFile({
+      cloudPath: `qrcodes/${sourceId}-${Date.now()}.png`,
+      fileContent: result.buffer
+    })
+
+    return {
+      code: 0,
+      message: '生成成功',
+      data: { fileID: uploadResult.fileID }
+    }
+  } catch (err) {
+    // 如果 openapi 不可用，返回明确的错误提示
+    if (err.message && err.message.includes('openapi')) {
+      return {
+        code: -1,
+        message: '生成失败：请确认云函数已部署 config.json 并开通 openapi 权限。部署方法：右键 source 文件夹 →「上传并部署：云端安装依赖」'
+      }
+    }
+    return { code: -1, message: '生成失败: ' + err.message }
   }
 }
 
