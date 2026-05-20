@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#E94498">
+    <title>妖怪的跑步助手</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#E94498',
+                        secondary: '#F472B6',
+                        accent: '#FBBF24',
+                        light: '#FFF5F9',
+                        dark: '#4C1D95',
+                        aSound: '#EC4899', // 音效A颜色（滴）
+                        bSound: '#8B5CF6'  // 音效B颜色（答）
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Inter', 'system-ui', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+    
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .pulse-ring {
+                animation: pulse-ring 2s cubic-bezier(0.215, 0.61, 0.355, 1) infinite;
+            }
+            .beat-highlight { animation: beat 0.3s ease-in-out; }
+            .heart-beat { animation: heart-beat 1s ease-in-out infinite; }
+            .sound-a { background-color: rgba(236, 72, 153, 0.2); border-color: #EC4899; }
+            .sound-b { background-color: rgba(139, 92, 246, 0.2); border-color: #8B5CF6; }
+            .float { animation: float 3s ease-in-out infinite; }
+            .slide-up { animation: slide-up 0.5s ease-out forwards; }
+            .fade-in { animation: fade-in 0.5s ease-out forwards; }
+            
+            @keyframes pulse-ring {
+                0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(233, 68, 152, 0.4); }
+                70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(233, 68, 152, 0); }
+                100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(233, 68, 152, 0); }
+            }
+            
+            @keyframes heart-beat {
+                0% { transform: scale(0.9); }
+                14% { transform: scale(1.1); }
+                28% { transform: scale(0.9); }
+                42% { transform: scale(1.1); }
+                70% { transform: scale(0.9); }
+            }
+            
+            @keyframes beat {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.15); }
+                100% { transform: scale(1); }
+            }
+            
+            @keyframes float {
+                0% { transform: translateY(0px); }
+                50% { transform: translateY(-10px); }
+                100% { transform: translateY(0px); }
+            }
+            
+            @keyframes slide-up {
+                from { transform: translateY(20px); opacity: 0; }
+                to { transform: translateY(0); opacity: 1; }
+            }
+            
+            @keyframes fade-in {
+                from { opacity: 0; }
+                to { opacity: 1; }
+            }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-light to-pink-50 min-h-screen font-sans text-dark">
+    <!-- 页面加载动画 -->
+    <div id="loader" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
+        <i class="fa fa-heart text-primary text-5xl heart-beat mb-4"></i>
+        <p class="text-primary font-medium">准备中...</p>
+    </div>
+
+    <header class="bg-white/80 backdrop-blur-md shadow-sm sticky top-0 z-40 opacity-0 slide-up" style="animation-delay: 0.3s">
+        <div class="container mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa fa-heart text-primary text-2xl float"></i>
+                <h1 class="text-xl font-bold text-primary">妖怪的跑步助手</h1>
+            </div>
+            <button id="infoBtn" class="p-2 rounded-full hover:bg-pink-100 transition-colors">
+                <i class="fa fa-star text-accent"></i>
+            </button>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-4 py-8 opacity-0 slide-up" style="animation-delay: 0.5s">
+        <!-- 专属问候语 -->
+        <div class="mb-6 text-center">
+            <p id="greeting" class="text-secondary font-medium text-lg">亲爱的妖怪，今天也要元气满满地跑步哦！</p>
+        </div>
+        
+        <!-- 红心显示区域 -->
+        <div class="relative mb-10 w-full max-w-md mx-auto">
+            <div id="pulseRing" class="w-full aspect-square rounded-full border-8 border-primary/20 flex items-center justify-center pulse-ring"></div>
+            <div id="heartContainer" class="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-[90%] h-[90%] rounded-full bg-white flex items-center justify-center shadow-lg">
+                <i id="beatIcon" class="fa fa-heart text-red-500 heart-beat text-5xl"></i>
+            </div>
+            <!-- 装饰元素 -->
+            <div class="absolute -top-3 -left-3 w-10 h-10 bg-accent rounded-full flex items-center justify-center text-white float">
+                <i class="fa fa-bolt"></i>
+            </div>
+            <div class="absolute -bottom-2 -right-2 w-8 h-8 bg-secondary rounded-full flex items-center justify-center text-white float" style="animation-delay: 1s">
+                <i class="fa fa-heart"></i>
+            </div>
+        </div>
+        
+        <!-- 四拍节奏可视化 -->
+        <div class="bg-white rounded-xl p-4 shadow-md mb-8 max-w-md mx-auto">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="font-medium text-gray-700">当前节奏</h2>
+                <div class="flex items-center gap-2">
+                    <span class="text-xs text-gray-500">步频:</span>
+                    <span id="bpmDisplay" class="font-medium text-primary">150</span>
+                </div>
+            </div>
+            
+            <!-- 四拍可视化 -->
+            <div class="grid grid-cols-4 gap-2 mb-2">
+                <div id="beat1" class="h-16 rounded-lg border-2 border-gray-200 flex items-center justify-center text-gray-400">
+                    <span>1</span>
+                </div>
+                <div id="beat2" class="h-16 rounded-lg border-2 border-gray-200 flex items-center justify-center text-gray-400">
+                    <span>2</span>
+                </div>
+                <div id="beat3" class="h-16 rounded-lg border-2 border-gray-200 flex items-center justify-center text-gray-400">
+                    <span>3</span>
+                </div>
+                <div id="beat4" class="h-16 rounded-lg border-2 border-gray-200 flex items-center justify-center text-gray-400">
+                    <span>4</span>
+                </div>
+            </div>
+            
+            <!-- 音效说明 -->
+            <div class="flex gap-4 text-sm text-center">
+                <div class="flex-1">
+                    <div class="w-4 h-4 rounded-full bg-aSound mx-auto mb-1"></div>
+                    <span>滴 - 右脚</span>
+                </div>
+                <div class="flex-1">
+                    <div class="w-4 h-4 rounded-full bg-bSound mx-auto mb-1"></div>
+                    <span>答 - 左脚</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 数据统计 -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 max-w-2xl mx-auto">
+            <div class="bg-white rounded-xl p-4 shadow-md transform transition-transform hover:scale-105">
+                <p class="text-gray-500 text-sm mb-1">用时</p>
+                <p id="duration" class="text-xl font-bold text-primary">00:00</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-md transform transition-transform hover:scale-105">
+                <p class="text-gray-500 text-sm mb-1">距离</p>
+                <p id="distance" class="text-xl font-bold text-primary">0.00 公里</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-md transform transition-transform hover:scale-105">
+                <p class="text-gray-500 text-sm mb-1">配速</p>
+                <p id="pace" class="text-xl font-bold text-primary">00:00</p>
+            </div>
+            <div class="bg-white rounded-xl p-4 shadow-md transform transition-transform hover:scale-105">
+                <p class="text-gray-500 text-sm mb-1">当前公里</p>
+                <p id="currentKilometer" class="text-xl font-bold text-primary">0</p>
+            </div>
+        </div>
+        
+        <!-- 控制按钮 -->
+        <div class="flex flex-wrap justify-center gap-4 mb-10">
+            <button id="startBtn" class="bg-primary hover:bg-primary/90 text-white px-6 py-3 rounded-lg transition-all transform hover:scale-105">
+                <i class="fa fa-play mr-2"></i>开始跑步
+            </button>
+            <button id="pauseBtn" class="bg-gray-200 text-gray-600 px-6 py-3 rounded-lg transition-all transform hover:scale-105" disabled>
+                <i class="fa fa-pause mr-2"></i>暂停
+            </button>
+            <button id="resetBtn" class="bg-gray-200 text-gray-600 px-6 py-3 rounded-lg transition-all transform hover:scale-105" disabled>
+                <i class="fa fa-refresh mr-2"></i>重置
+            </button>
+        </div>
+        
+        <!-- 节奏方案选择 -->
+        <div class="bg-white rounded-xl p-4 shadow-md mb-8">
+            <h2 class="font-medium text-gray-700 mb-4">选择节奏方案</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <!-- 方案1：经典左右交替 -->
+                <div class="pattern-btn border border-gray-200 rounded-lg p-3 hover:border-primary cursor-pointer transition-colors" data-pattern="1">
+                    <h3 class="font-medium text-primary mb-1">1. 经典左右交替</h3>
+                    <p class="text-xs text-gray-500 mb-2">4拍4音 · 均匀交替</p>
+                    <div class="flex gap-1">
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                    </div>
+                </div>
+                
+                <!-- 方案2：双倍步频 -->
+                <div class="pattern-btn border border-gray-200 rounded-lg p-3 hover:border-primary cursor-pointer transition-colors" data-pattern="2">
+                    <h3 class="font-medium text-primary mb-1">2. 双倍步频</h3>
+                    <p class="text-xs text-gray-500 mb-2">4拍4音 · 小步快频</p>
+                    <div class="flex gap-1">
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                    </div>
+                </div>
+                
+                <!-- 方案3：重点步 -->
+                <div class="pattern-btn border border-gray-200 rounded-lg p-3 hover:border-primary cursor-pointer transition-colors" data-pattern="3">
+                    <h3 class="font-medium text-primary mb-1">3. 重点步</h3>
+                    <p class="text-xs text-gray-500 mb-2">4拍3音 · 强调起步</p>
+                    <div class="flex gap-1">
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs border border-gray-200">-</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                    </div>
+                </div>
+                
+                <!-- 方案4：切分节奏 -->
+                <div class="pattern-btn border border-gray-200 rounded-lg p-3 hover:border-primary cursor-pointer transition-colors" data-pattern="4">
+                    <h3 class="font-medium text-primary mb-1">4. 切分节奏</h3>
+                    <p class="text-xs text-gray-500 mb-2">4拍3音 · 节奏变化</p>
+                    <div class="flex gap-1">
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs border border-gray-200">-</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                    </div>
+                </div>
+                
+                <!-- 方案5：华尔兹韵律 -->
+                <div class="pattern-btn border border-gray-200 rounded-lg p-3 hover:border-primary cursor-pointer transition-colors" data-pattern="5">
+                    <h3 class="font-medium text-primary mb-1">5. 华尔兹韵律</h3>
+                    <p class="text-xs text-gray-500 mb-2">4拍3音 · 流动感</p>
+                    <div class="flex gap-1">
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs border border-gray-200">-</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                    </div>
+                </div>
+                
+                <!-- 方案6：前导步 -->
+                <div class="pattern-btn border border-gray-200 rounded-lg p-3 hover:border-primary cursor-pointer transition-colors" data-pattern="6">
+                    <h3 class="font-medium text-primary mb-1">6. 前导步</h3>
+                    <p class="text-xs text-gray-500 mb-2">4拍3音 · 启动强调</p>
+                    <div class="flex gap-1">
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-a">滴</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs sound-b">答</span>
+                        <span class="w-6 h-6 rounded flex items-center justify-center text-xs border border-gray-200">-</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- BPM调节 -->
+        <div class="bg-white rounded-xl p-4 shadow-md max-w-md mx-auto mb-8">
+            <div class="flex justify-between items-center mb-2">
+                <label class="text-sm text-gray-600">步频调节 (140-160 BPM)</label>
+                <span id="currentBpm" class="font-medium text-primary">150</span>
+            </div>
+            <input type="range" id="bpmSlider" min="140" max="160" value="150" step="5"
+                   class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer">
+        </div>
+        
+        <!-- 添加到主屏幕提示按钮 -->
+        <button id="addHomeBtn" class="mt-2 w-full max-w-md mx-auto px-6 py-2 bg-pink-100 hover:bg-pink-200 text-primary rounded-lg text-sm flex items-center justify-center gap-2 transition-all opacity-0">
+            <i class="fa fa-home"></i>
+            <span>添加到桌面，方便妖怪下次使用</span>
+        </button>
+    </main>
+
+    <!-- 信息模态框 -->
+    <div id="infoModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 hidden opacity-0">
+        <div class="bg-white rounded-2xl max-w-md w-full mx-4 p-6 shadow-2xl transform transition-all scale-95">
+            <div class="flex justify-between items-start mb-4">
+                <h2 class="text-2xl font-bold text-primary">给我家妖怪的小提示</h2>
+                <button id="closeInfoBtn" class="text-gray-500 hover:text-gray-700">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="modalContent" class="space-y-4 text-gray-700">
+                <p>跑步时跟着大红心的节拍跑就对啦，有六种节奏可以选择哦~</p>
+                <p>每种节奏都用"滴"和"答"两种声音，"滴"代表右脚，"答"代表左脚~</p>
+                <p>可以根据自己的跑步习惯调整步频，找到最舒服的节奏~</p>
+                <p>数据区域会显示你跑了多少公里，一步按0.7米计算哦~</p>
+                <p class="pt-2 border-t border-pink-100"><i class="fa fa-heart text-primary mr-2"></i>
+                妖怪跑步的时候要注意安全，跑完步记得拉伸哦，爱你~</p>
+            </div>
+            <button id="gotItBtn" class="mt-6 w-full py-3 bg-primary hover:bg-primary/90 text-white rounded-lg transition-all transform hover:scale-105">
+                知道啦，谢谢~
+            </button>
+        </div>
+    </div>
+
+    <!-- 成就提示 -->
+    <div id="achievementToast" class="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-white rounded-xl p-4 shadow-lg z-50 hidden max-w-xs w-full">
+        <div class="flex items-center gap-3">
+            <div class="w-12 h-12 bg-accent rounded-full flex items-center justify-center text-white">
+                <i class="fa fa-trophy text-xl"></i>
+            </div>
+            <div>
+                <h3 class="font-bold text-primary" id="achievementTitle">完成1公里！</h3>
+                <p class="text-sm text-gray-600" id="achievementDesc">太棒了，继续加油！</p>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-white/80 backdrop-blur-md py-4 text-center text-gray-500 text-sm mt-8 opacity-0 slide-up" style="animation-delay: 0.7s">
+        <div class="container mx-auto px-4">
+            <p>给我最爱的妖怪 &copy; 永远有效</p>
+        </div>
+    </footer>
+
+    <script>
+        // 全局状态管理
+        const state = {
+            isRunning: false,
+            isPaused: false,
+            startTime: null,
+            pauseTime: null,
+            totalPausedTime: 0,
+            distance: 0,
+            totalSeconds: 0,
+            currentKilometer: 0,
+            lastKilometer: 0,
+            cadence: 150, // BPM
+            currentBeat: 0, // 0-3对应1-4拍
+            currentPattern: 1,
+            beatInterval: null,
+            timerInterval: null,
+            wakeLock: null,
+            audioContext: null,
+            isAudioReady: false,
+            soundBuffers: {
+                a: null, // 音效A（滴）
+                b: null  // 音效B（答）
+            },
+            stepLength: 0.7, // 步长(米)
+            achievements: {
+                firstRun: false,
+                km1: false,
+                km3: false,
+                km5: false,
+                10min: false
+            }
+        };
+        
+        // 六种节奏方案定义（4拍为一个循环，每个位置为'A'/'B'/'-'）
+        const patterns = {
+            1: ['A', 'B', 'A', 'B'], // 经典左右交替（4音）
+            2: ['A', 'A', 'B', 'B'], // 双倍步频（4音）
+            3: ['A', 'B', '-', 'A'], // 重点步（3音）
+            4: ['A', '-', 'B', 'B'], // 切分节奏（3音）
+            5: ['A', '-', 'B', 'A'], // 华尔兹韵律（3音）
+            6: ['A', 'A', 'B', '-']  // 前导步（3音）
+        };
+        
+        // DOM元素
+        const elements = {
+            startBtn: document.getElementById('startBtn'),
+            pauseBtn: document.getElementById('pauseBtn'),
+            resetBtn: document.getElementById('resetBtn'),
+            durationEl: document.getElementById('duration'),
+            distanceEl: document.getElementById('distance'),
+            paceEl: document.getElementById('pace'),
+            currentKilometerEl: document.getElementById('currentKilometer'),
+            pulseRing: document.getElementById('pulseRing'),
+            beatIcon: document.getElementById('beatIcon'),
+            infoBtn: document.getElementById('infoBtn'),
+            infoModal: document.getElementById('infoModal'),
+            closeInfoBtn: document.getElementById('closeInfoBtn'),
+            gotItBtn: document.getElementById('gotItBtn'),
+            bpmSlider: document.getElementById('bpmSlider'),
+            bpmDisplay: document.getElementById('bpmDisplay'),
+            currentBpm: document.getElementById('currentBpm'),
+            beatElements: [
+                document.getElementById('beat1'),
+                document.getElementById('beat2'),
+                document.getElementById('beat3'),
+                document.getElementById('beat4')
+            ],
+            patternBtns: document.querySelectorAll('.pattern-btn'),
+            greeting: document.getElementById('greeting'),
+            loader: document.getElementById('loader'),
+            achievementToast: document.getElementById('achievementToast'),
+            achievementTitle: document.getElementById('achievementTitle'),
+            achievementDesc: document.getElementById('achievementDesc'),
+            addHomeBtn: document.getElementById('addHomeBtn')
+        };
+        
+        // 初始化函数
+        async function init() {
+            // 页面加载动画
+            setTimeout(() => {
+                elements.loader.classList.add('opacity-0', 'pointer-events-none');
+                elements.loader.style.transition = 'opacity 0.5s ease-out';
+            }, 1000);
+            
+            // 初始化音频
+            await initAudio();
+            
+            // 检查是否是移动设备，显示添加到桌面提示
+            if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+                setTimeout(() => {
+                    elements.addHomeBtn.classList.remove('opacity-0');
+                }, 3000);
+            }
+            
+            // 检查本地存储的成就
+            loadAchievements();
+        }
+        
+        // 初始化音频
+        async function initAudio() {
+            if (state.audioContext) return;
+            
+            try {
+                state.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // 创建音效A（滴 - 高频短促）
+                state.soundBuffers.a = await createTone(1047, 0.1, 0.15); // 频率1047Hz，时长0.1s
+                
+                // 创建音效B（答 - 低频稍厚）
+                state.soundBuffers.b = await createTone(523, 0.12, 0.2); // 频率523Hz，时长0.12s
+                
+                state.isAudioReady = true;
+                console.log('音频初始化完成');
+            } catch (err) {
+                console.error('音频初始化失败:', err);
+                showGreeting("需要点击页面启用音频功能哦~", 3000);
+            }
+        }
+        
+        // 创建基础音调
+        function createTone(frequency, duration, gain) {
+            return new Promise((resolve) => {
+                const oscillator = state.audioContext.createOscillator();
+                const gainNode = state.audioContext.createGain();
+                const destination = state.audioContext.createMediaStreamDestination();
+                const recorder = new MediaRecorder(destination.stream);
+                const audioChunks = [];
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.setValueAtTime(frequency, state.audioContext.currentTime);
+                gainNode.gain.setValueAtTime(gain, state.audioContext.currentTime);
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(destination);
+                
+                recorder.ondataavailable = (e) => audioChunks.push(e.data);
+                recorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks);
+                    const arrayBuffer = await audioBlob.arrayBuffer();
+                    const audioBuffer = await state.audioContext.decodeAudioData(arrayBuffer);
+                    resolve(audioBuffer);
+                };
+                
+                oscillator.start();
+                recorder.start();
+                
+                // 设定音效时长
+                setTimeout(() => {
+                    recorder.stop();
+                    oscillator.stop();
+                }, duration * 1000);
+            });
+        }
+        
+        // 播放指定音效
+        function playSound(type) {
+            if (!state.isAudioReady || state.audioContext.state === 'suspended') {
+                state.audioContext.resume();
+                return;
+            }
+            
+            const buffer = state.soundBuffers[type];
+            if (!buffer) return;
+            
+            const source = state.audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(state.audioContext.destination);
+            source.start(0);
+        }
+        
+        // 播放当前节拍
+        function playCurrentBeat() {
+            // 重置所有节拍样式
+            elements.beatElements.forEach(el => {
+                el.classList.remove('beat-highlight', 'sound-a', 'sound-b');
+                el.classList.add('border-gray-200');
+            });
+            
+            // 获取当前节拍的音效
+            const currentSound = patterns[state.currentPattern][state.currentBeat];
+            const currentBeatEl = elements.beatElements[state.currentBeat];
+            
+            // 更新视觉反馈
+            currentBeatEl.classList.add('beat-highlight', 'border-primary');
+            if (currentSound === 'A') {
+                currentBeatEl.classList.add('sound-a');
+            } else if (currentSound === 'B') {
+                currentBeatEl.classList.add('sound-b');
+            }
+            
+            // 播放音效（如果不是休止符）
+            if (currentSound !== '-') {
+                playSound(currentSound.toLowerCase());
+                
+                // 同步红心动画
+                elements.beatIcon.classList.add('beat-highlight');
+                setTimeout(() => {
+                    elements.beatIcon.classList.remove('beat-highlight');
+                }, 150);
+                
+                // 计算步长和距离
+                state.distance += state.stepLength / 1000; // 转换为公里
+                updateStats();
+                
+                // 检查是否完成新的一公里
+                checkKilometerAchievement();
+                
+                // 检查时间相关成就
+                checkTimeAchievements();
+            }
+            
+            // 切换到下一拍（循环）
+            state.currentBeat = (state.currentBeat + 1) % 4;
+        }
+        
+        // 显示个性化问候语
+        function showGreeting(message, duration = 3000) {
+            const originalText = elements.greeting.textContent;
+            elements.greeting.textContent = message;
+            elements.greeting.classList.add('text-accent');
+            
+            setTimeout(() => {
+                elements.greeting.textContent = originalText;
+                elements.greeting.classList.remove('text-accent');
+            }, duration);
+        }
+        
+        // 显示成就提示
+        function showAchievement(title, description) {
+            elements.achievementTitle.textContent = title;
+            elements.achievementDesc.textContent = description;
+            elements.achievementToast.classList.remove('hidden');
+            elements.achievementToast.classList.add('fade-in');
+            
+            // 5秒后隐藏
+            setTimeout(() => {
+                elements.achievementToast.classList.add('hidden');
+            }, 5000);
+        }
+        
+        // 检查公里数成就
+        function checkKilometerAchievement() {
+            const currentKm = Math.floor(state.distance);
+            
+            // 检查是否完成新的一公里
+            if (currentKm > state.lastKilometer && currentKm > 0) {
+                // 计算这一公里的用时
+                const kmTime = state.totalSeconds - (state.lastKilometer * 60000 / state.cadence * (1000 / (state.stepLength * 100)));
+                
+                // 计算这一公里的配速(秒/公里)
+                const kmPace = kmTime / (currentKm - state.lastKilometer);
+                
+                // 更新当前公里数
+                state.lastKilometer = currentKm;
+                elements.currentKilometerEl.textContent = currentKm;
+                
+                // 播放公里提醒
+                playKilometerAlert(currentKm, kmTime, kmPace);
+                
+                // 显示鼓励信息
+                const encouragements = [
+                    `太棒了！已经跑了${currentKm}公里啦~`,
+                    `妖怪好厉害，都跑到${currentKm}公里了！`,
+                    `加油哦，已经${currentKm}公里了，继续保持~`
+                ];
+                const randomEncouragement = encouragements[Math.floor(Math.random() * encouragements.length)];
+                showGreeting(randomEncouragement, 4000);
+                
+                // 检查并解锁成就
+                if (currentKm === 1 && !state.achievements.km1) {
+                    state.achievements.km1 = true;
+                    showAchievement("完成第一公里！", "迈出了成功的第一步，继续加油！");
+                    saveAchievements();
+                } else if (currentKm === 3 && !state.achievements.km3) {
+                    state.achievements.km3 = true;
+                    showAchievement("三公里达成！", "已经跑了3公里，体力真不错呢！");
+                    saveAchievements();
+                } else if (currentKm === 5 && !state.achievements.km5) {
+                    state.achievements.km5 = true;
+                    showAchievement("五公里突破！", "太厉害了，已经完成5公里长跑！");
+                    saveAchievements();
+                }
+            }
+        }
+        
+        // 检查时间相关成就
+        function checkTimeAchievements() {
+            // 跑步满10分钟
+            if (state.totalSeconds >= 600 && !state.achievements.10min) {
+                state.achievements.10min = true;
+                showAchievement("坚持10分钟！", "已经连续跑步10分钟，毅力真棒！");
+                saveAchievements();
+            }
+        }
+        
+        // 播放公里提醒语音
+        function playKilometerAlert(km, time, pace) {
+            if (!state.isAudioReady) return;
+            
+            // 构建语音文本
+            const timeStr = `${Math.floor(time / 60)}分${Math.floor(time % 60)}秒`;
+            const paceStr = `${Math.floor(pace / 60)}分${Math.floor(pace % 60)}秒`;
+            const text = `你已跑步${km}公里，用时${timeStr}，平均配速${paceStr}每公里`;
+            
+            // 使用Web Speech API
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'zh-CN';
+            utterance.volume = 1;
+            utterance.rate = 0.9; // 稍慢一点更清晰
+            utterance.pitch = 1.1; // 稍微高一点更亲切
+            
+            // 暂停节拍音效
+            const wasRunning = state.isRunning;
+            if (wasRunning) {
+                clearInterval(state.beatInterval);
+            }
+            
+            // 播放语音
+            window.speechSynthesis.speak(utterance);
+            
+            // 语音播放完成后恢复节拍
+            utterance.onend = () => {
+                if (wasRunning && state.isRunning && !state.isPaused) {
+                    startBeatInterval();
+                }
+            };
+        }
+        
+        // 更新统计数据
+        function updateStats() {
+            if (!state.isRunning) return;
+            
+            // 计算总时间(扣除暂停时间)
+            const now = new Date();
+            const runningTime = state.pauseTime ? 
+                (state.pauseTime - state.startTime) + (now - state.pauseTime) - state.totalPausedTime :
+                now - state.startTime - state.totalPausedTime;
+                
+            state.totalSeconds = Math.floor(runningTime / 1000);
+            
+            // 计算并更新时间显示
+            const minutes = Math.floor(state.totalSeconds / 60);
+            const seconds = state.totalSeconds % 60;
+            elements.durationEl.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            // 更新距离显示
+            elements.distanceEl.textContent = `${state.distance.toFixed(2)} 公里`;
+            
+            // 计算并更新配速(分钟/公里)
+            if (state.distance > 0) {
+                const paceSeconds = state.totalSeconds / state.distance;
+                const paceMinutes = Math.floor(paceSeconds / 60);
+                const paceSecs = Math.floor(paceSeconds % 60);
+                elements.paceEl.textContent = `${paceMinutes.toString().padStart(2, '0')}:${paceSecs.toString().padStart(2, '0')}`;
+            }
+        }
+        
+        // 开始节拍间隔
+        function startBeatInterval() {
+            // 清除现有间隔
+            if (state.beatInterval) {
+                clearInterval(state.beatInterval);
+            }
+            
+            // 根据步频计算间隔时间(毫秒)
+            const beatIntervalMs = 60000 / state.cadence;
+            
+            // 设置新的节拍间隔
+            state.beatInterval = setInterval(playCurrentBeat, beatIntervalMs);
+        }
+        
+        // 开始跑步
+        async function startRunning() {
+            // 初始化音频
+            if (!state.isAudioReady) {
+                await initAudio();
+                if (!state.isAudioReady) {
+                    return;
+                }
+            }
+            
+            if (state.isPaused) {
+                // 从暂停状态恢复
+                state.isPaused = false;
+                state.pauseTime = new Date();
+                showGreeting("继续跑步啦，加油哦~");
+                
+                // 恢复唤醒锁
+                requestWakeLock();
+                
+                // 恢复节拍
+                startBeatInterval();
+            } else {
+                // 全新开始
+                state.isRunning = true;
+                state.startTime = new Date();
+                state.pauseTime = new Date();
+                showGreeting("开始跑步咯，跟着节奏跑起来~");
+                
+                // 检查并解锁首次跑步成就
+                if (!state.achievements.firstRun) {
+                    state.achievements.firstRun = true;
+                    showAchievement("首次跑步！", "恭喜开始跑步之旅，坚持就是胜利！");
+                    saveAchievements();
+                }
+                
+                // 获取唤醒锁
+                requestWakeLock();
+                
+                // 启动定时器更新统计
+                state.timerInterval = setInterval(updateStats, 1000);
+                
+                // 开始节拍
+                startBeatInterval();
+            }
+            
+            // 更新按钮状态
+            elements.startBtn.disabled = true;
+            elements.startBtn.classList.add('bg-gray-200', 'text-gray-600');
+            elements.startBtn.classList.remove('bg-primary', 'hover:bg-primary/90', 'text-white');
+            elements.pauseBtn.disabled = false;
+            elements.pauseBtn.classList.remove('bg-gray-200', 'text-gray-600');
+            elements.pauseBtn.classList.add('bg-secondary', 'hover:bg-secondary/90', 'text-white');
+            elements.resetBtn.disabled = false;
+            elements.resetBtn.classList.remove('bg-gray-200', 'text-gray-600');
+            elements.resetBtn.classList.add('bg-gray-500', 'hover:bg-gray-600', 'text-white');
+        }
+        
+        // 暂停跑步
+        function pauseRunning() {
+            if (!state.isRunning) return;
+            
+            state.isPaused = true;
+            state.totalPausedTime += new Date() - state.pauseTime;
+            showGreeting("休息一下下，等下继续哦~");
+            
+            // 暂停节拍
+            clearInterval(state.beatInterval);
+            
+            // 释放唤醒锁
+            releaseWakeLock();
+            
+            // 更新按钮状态
+            elements.startBtn.disabled = false;
+            elements.startBtn.classList.remove('bg-gray-200', 'text-gray-600');
+            elements.startBtn.classList.add('bg-primary', 'hover:bg-primary/90', 'text-white');
+            elements.pauseBtn.disabled = true;
+            elements.pauseBtn.classList.add('bg-gray-200', 'text-gray-600');
+            elements.pauseBtn.classList.remove('bg-secondary', 'hover:bg-secondary/90', 'text-white');
+        }
+        
+        // 重置跑步
+        function resetRunning() {
+            // 停止所有定时器
+            clearInterval(state.beatInterval);
+            clearInterval(state.timerInterval);
+            
+            // 释放唤醒锁
+            releaseWakeLock();
+            
+            // 重置状态
+            state.isRunning = false;
+            state.isPaused = false;
+            state.startTime = null;
+            state.pauseTime = null;
+            state.totalPausedTime = 0;
+            state.distance = 0;
+            state.totalSeconds = 0;
+            state.currentKilometer = 0;
+            state.lastKilometer = 0;
+            state.currentBeat = 0;
+            
+            // 重置UI
+            elements.durationEl.textContent = '00:00';
+            elements.distanceEl.textContent = '0.00 公里';
+            elements.paceEl.textContent = '00:00';
+            elements.currentKilometerEl.textContent = '0';
+            
+            // 重置节拍显示
+            elements.beatElements.forEach(el => {
+                el.classList.remove('beat-highlight', 'sound-a', 'sound-b', 'border-primary');
+                el.classList.add('border-gray-200');
+            });
+            
+            showGreeting("已经重置好啦，随时可以重新开始~");
+            
+            // 更新按钮状态
+            elements.startBtn.disabled = false;
+            elements.startBtn.classList.remove('bg-gray-200', 'text-gray-600');
+            elements.startBtn.classList.add('bg-primary', 'hover:bg-primary/90', 'text-white');
+            elements.pauseBtn.disabled = true;
+            elements.pauseBtn.classList.add('bg-gray-200', 'text-gray-600');
+            elements.pauseBtn.classList.remove('bg-secondary', 'hover:bg-secondary/90', 'text-white');
+            elements.resetBtn.disabled = true;
+            elements.resetBtn.classList.add('bg-gray-200', 'text-gray-600');
+            elements.resetBtn.classList.remove('bg-gray-500', 'hover:bg-gray-600', 'text-white');
+        }
+        
+        // 切换节奏方案
+        function setPattern(patternId) {
+            state.currentPattern = patternId;
+            state.currentBeat = 0;
+            
+            // 更新按钮样式
+            elements.patternBtns.forEach(btn => {
+                if (parseInt(btn.dataset.pattern) === patternId) {
+                    btn.classList.add('border-primary', 'bg-primary/5');
+                } else {
+                    btn.classList.remove('border-primary', 'bg-primary/5');
+                }
+            });
+            
+            // 重置当前节拍显示
+            elements.beatElements.forEach(el => {
+                el.classList.remove('beat-highlight', 'sound-a', 'sound-b', 'border-primary');
+                el.classList.add('border-gray-200');
+            });
+            
+            // 显示提示
+            const patternNames = [
+                "", // 索引0不用
+                "经典左右交替",
+                "双倍步频",
+                "重点步",
+                "切分节奏",
+                "华尔兹韵律",
+                "前导步"
+            ];
+            showGreeting(`已选择${patternNames[patternId]}节奏~`);
+        }
+        
+        // 调整BPM
+        function setBpm(value) {
+            state.cadence = parseInt(value);
+            elements.bpmDisplay.textContent = state.cadence;
+            elements.currentBpm.textContent = state.cadence;
+            
+            // 如果正在运行，重新启动以应用新速度
+            if (state.isRunning && !state.isPaused) {
+                clearInterval(state.beatInterval);
+                startBeatInterval();
+            }
+        }
+        
+        // 初始化唤醒锁
+        async function requestWakeLock() {
+            if (!state.isRunning || state.wakeLock) return;
+            
+            try {
+                if ('wakeLock' in navigator) {
+                    state.wakeLock = await navigator.wakeLock.request('screen');
+                    
+                    state.wakeLock.addEventListener('release', () => {
+                        if (state.isRunning && !state.isPaused) {
+                            setTimeout(requestWakeLock, 1000);
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('无法获取唤醒锁:', err);
+            }
+        }
+        
+        // 释放唤醒锁
+        function releaseWakeLock() {
+            if (state.wakeLock) {
+                state.wakeLock.release()
+                    .then(() => {
+                        state.wakeLock = null;
+                    })
+                    .catch(err => {
+                        console.error('释放唤醒锁失败:', err);
+                    });
+            }
+        }
+        
+        // 保存成就到本地存储
+        function saveAchievements() {
+            try {
+                localStorage.setItem('runningAchievements', JSON.stringify(state.achievements));
+            } catch (err) {
+                console.error('保存成就失败:', err);
+            }
+        }
+        
+        // 从本地存储加载成就
+        function loadAchievements() {
+            try {
+                const saved = localStorage.getItem('runningAchievements');
+                if (saved) {
+                    state.achievements = JSON.parse(saved);
+                }
+            } catch (err) {
+                console.error('加载成就失败:', err);
+            }
+        }
+        
+        // 事件监听
+        elements.startBtn.addEventListener('click', startRunning);
+        elements.pauseBtn.addEventListener('click', pauseRunning);
+        elements.resetBtn.addEventListener('click', resetRunning);
+        
+        // BPM调节
+        elements.bpmSlider.addEventListener('input', (e) => {
+            setBpm(e.target.value);
+        });
+        
+        // 节奏方案选择
+        elements.patternBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                setPattern(parseInt(btn.dataset.pattern));
+            });
+        });
+        
+        // 信息模态框
+        elements.infoBtn.addEventListener('click', () => {
+            elements.infoModal.classList.remove('hidden');
+            // 触发动画
+            setTimeout(() => {
+                elements.infoModal.classList.add('opacity-100');
+                elements.infoModal.querySelector('div').classList.remove('scale-95');
+                elements.infoModal.querySelector('div').classList.add('scale-100');
+            }, 10);
+            document.body.style.overflow = 'hidden';
+        });
+        
+        function closeModal() {
+            elements.infoModal.classList.remove('opacity-100');
+            elements.infoModal.querySelector('div').classList.remove('scale-100');
+            elements.infoModal.querySelector('div').classList.add('scale-95');
+            
+            setTimeout(() => {
+                elements.infoModal.classList.add('hidden');
+                document.body.style.overflow = '';
+            }, 300);
+        }
+        
+        elements.closeInfoBtn.addEventListener('click', closeModal);
+        elements.gotItBtn.addEventListener('click', closeModal);
+        
+        elements.infoModal.addEventListener('click', (e) => {
+            if (e.target === elements.infoModal) {
+                closeModal();
+            }
+        });
+        
+        // 添加到桌面提示按钮点击事件
+        elements.addHomeBtn.addEventListener('click', () => {
+            // 检查是否是iOS Safari
+            if (/iPhone|iPad|iPod/i.test(navigator.userAgent) && /Safari/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent)) {
+                showGreeting("点击Safari底部的分享按钮，选择'添加到主屏幕'哦~", 5000);
+            }
+            // 检查是否是Android Chrome
+            else if (/Android/i.test(navigator.userAgent) && /Chrome/i.test(navigator.userAgent)) {
+                showGreeting("点击Chrome右上角的三个点，选择'添加到主屏幕'哦~", 5000);
+            }
+        });
+        
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', () => {
+            // 默认选择方案1
+            setPattern(1);
+            // 初始化应用
+            init();
+        });
+    </script>
+</body>
+</html>
+    
