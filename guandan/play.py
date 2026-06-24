@@ -83,14 +83,16 @@ def advise(hand: List[Card], current: Optional[Combo], level: int,
            owner_seat: Optional[int] = None, my_seat: Optional[int] = None,
            opp_min_cards: int = 99) -> dict:
     """返回 {'action':'play'/'pass', 'combo':Combo|None, 'reason':str}。"""
+    from strategy_v2 import lead_v2, follow_v2, decompose
     opp_low = opp_min_cards <= 3
     if current is None:
-        c = choose_lead(hand, level)
+        c = lead_v2(hand, level)
+        plan = decompose(hand, level)
         return {"action": "play", "combo": c,
-                "reason": f"你是首家，建议先走小牌、保留炸弹：出 {c}"}
+                "reason": f"你是首家，按最少{len(plan)}手的计划先走小牌、保留炸弹：出 {c}"}
     owner_is_partner = (owner_seat is not None and my_seat is not None
                         and owner_seat == teammate(my_seat))
-    c = choose_follow(hand, current, owner_is_partner, level, opp_low)
+    c = follow_v2(hand, current, owner_is_partner, level, opp_low)
     if c is None:
         if owner_is_partner:
             return {"action": "pass", "combo": None,
@@ -104,7 +106,13 @@ def advise(hand: List[Card], current: Optional[Combo], level: int,
 # --------------------------------------------------------------------------
 # 一局对局
 # --------------------------------------------------------------------------
-def play_game(rng: random.Random, level: int = 2, verbose: bool = False) -> dict:
+def play_game(rng: random.Random, level: int = 2, verbose: bool = False,
+              strategies=None) -> dict:
+    """strategies: 长度4的列表，每项为 {'lead':fn(hand,level), 'follow':fn(hand,current,partner,level,opp_low)}。
+    缺省全部用 V1 启发式。"""
+    if strategies is None:
+        v1 = {"lead": choose_lead, "follow": choose_follow}
+        strategies = [v1, v1, v1, v1]
     hands = deal(rng, level)
     finished: List[int] = []          # 走牌名次
     leader = rng.randrange(NUM_PLAYERS)
@@ -141,7 +149,7 @@ def play_game(rng: random.Random, level: int = 2, verbose: bool = False) -> dict
             continue
 
         if current is None:                       # 首家
-            combo = choose_lead(hands[turn], level)
+            combo = strategies[turn]["lead"](hands[turn], level)
             play_combo(turn, combo)
             current, owner, passes = combo, turn, 0
             tricks += 1
@@ -159,8 +167,8 @@ def play_game(rng: random.Random, level: int = 2, verbose: bool = False) -> dict
         opp_min = min((len(hands[s]) for s in act
                        if s != turn and (s % 2) != (turn % 2)), default=99)
         owner_is_partner = (owner is not None and owner == teammate(turn))
-        combo = choose_follow(hands[turn], current, owner_is_partner, level,
-                              opp_min <= 3)
+        combo = strategies[turn]["follow"](hands[turn], current, owner_is_partner,
+                                           level, opp_min <= 3)
         if combo is not None:
             play_combo(turn, combo)
             current, owner, passes = combo, turn, 0
