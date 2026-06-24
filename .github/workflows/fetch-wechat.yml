@@ -1,0 +1,47 @@
+name: fetch-wechat
+
+on:
+  push:
+    paths:
+      - 'fetch/urls.txt'
+  workflow_dispatch:
+    inputs:
+      url:
+        description: 'WeChat article URL (overrides fetch/urls.txt)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fetch-wechat
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Fetch article
+        run: |
+          python fetch/fetch_wechat.py "${{ github.event.inputs.url }}"
+
+      - name: Commit results
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add fetch/output
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "chore: fetched wechat article output [skip ci]"
+            git push
+          fi

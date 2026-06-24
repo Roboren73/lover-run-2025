@@ -1,0 +1,2 @@
+# One WeChat article URL per line. A push that changes this file triggers the fetcher.
+https://mp.weixin.qq.com/s/xPNaxqm1rqKunmzfPAVimw
