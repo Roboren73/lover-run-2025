@@ -74,6 +74,10 @@ const CLASS_NAMES = ["10C","10D","10H","10S","2C","2D","2H","2S","3C","3D","3H",
 const RANKMAP = {A:14,K:13,Q:12,J:11,T:10,"10":10,9:9,8:8,7:7,6:6,5:5,4:4,3:3,2:2};
 function parseCardName(name){
   const s=String(name).trim().toUpperCase();
+  if(s.includes("JOKER")||s.includes("王")){
+    if(s.includes("BIG")||s.includes("RED")||s.includes("大")||s.includes("_B")) return G.card(17,null); // 大王
+    return G.card(16,null); // 小王(默认)
+  }
   let m=s.match(/^(10|[2-9TAKQJ])([SHDC])$/)||s.match(/^([SHDC])(10|[2-9TAKQJ])$/);
   if(m){ const a=m[1],b=m[2]; const r=(b in SUIT_SYM)?a:b, su=(b in SUIT_SYM)?b:a;
     if(RANKMAP[r]&&SUIT_SYM[su]) return G.card(RANKMAP[r],su); }

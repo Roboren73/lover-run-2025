@@ -1,0 +1,4 @@
+# 本地训练只需要这些；带 CUDA 的 torch 用 README 里的专用命令单独装
+ultralytics>=8.2.0
+onnx
+onnxruntime
