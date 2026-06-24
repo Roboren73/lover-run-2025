@@ -296,18 +296,132 @@
 
   function teammate(seat) { return (seat + 2) % 4; }
 
-  // 建议接口：前端核心调用
+  // ---- V2：手牌拆解(最少手数) + 规划型策略 ----
+  function decompose(hand, level) {
+    const pool = new Map(), wilds = [], jokers = [];
+    for (const c of hand) {
+      if (isJoker(c)) jokers.push(c);
+      else if (isWild(c, level)) wilds.push(c);
+      else { if (!pool.has(c.rank)) pool.set(c.rank, []); pool.get(c.rank).push(c); }
+    }
+    const combos = [];
+    const ov = (r) => orderValue(r, level);
+    const cnt = (r) => (pool.get(r) || []).length;
+    const pop = (r) => pool.get(r).pop();
+
+    // 天王炸
+    const small = jokers.filter((c) => c.rank === 16), big = jokers.filter((c) => c.rank === 17);
+    if (small.length >= 2 && big.length >= 2) {
+      const jb = small.slice(0, 2).concat(big.slice(0, 2));
+      combos.push(combo("joker_bomb", 4, 100, jb, true, [100, 0]));
+      for (const c of jb) jokers.splice(jokers.indexOf(c), 1);
+    }
+    // 自然炸弹
+    for (const r of [...pool.keys()]) {
+      if (cnt(r) >= 4) {
+        const cards = pool.get(r).slice(); const n = cards.length;
+        combos.push(combo("bomb", n, ov(r), cards, true, [bombTier("bomb", n), ov(r)]));
+        pool.set(r, []);
+      }
+    }
+    // 顺子(自然, 长5)
+    let changed = true;
+    while (changed) { changed = false;
+      for (const { ranks, top } of windows(5)) {
+        if (ranks.every((r) => cnt(r) >= 1)) {
+          combos.push(combo("straight", 5, top, ranks.map((r) => pop(r)))); changed = true;
+        }
+      }
+    }
+    // 钢板
+    changed = true;
+    while (changed) { changed = false;
+      for (const { ranks, top } of windows(2)) {
+        if (ranks.every((r) => cnt(r) >= 3)) {
+          const b = []; for (const r of ranks) for (let i = 0; i < 3; i++) b.push(pop(r));
+          combos.push(combo("consec_triples", 6, top, b)); changed = true;
+        }
+      }
+    }
+    // 三连对
+    changed = true;
+    while (changed) { changed = false;
+      for (const { ranks, top } of windows(3)) {
+        if (ranks.every((r) => cnt(r) >= 2)) {
+          const b = []; for (const r of ranks) for (let i = 0; i < 2; i++) b.push(pop(r));
+          combos.push(combo("consec_pairs", 6, top, b)); changed = true;
+        }
+      }
+    }
+    // 三同
+    for (const r of [...pool.keys()].sort((a, b) => a - b))
+      while (cnt(r) >= 3) combos.push(combo("triple", 3, ov(r), [pop(r), pop(r), pop(r)]));
+    // 对子
+    for (const r of [...pool.keys()].sort((a, b) => a - b))
+      while (cnt(r) >= 2) combos.push(combo("pair", 2, ov(r), [pop(r), pop(r)]));
+    // 用百搭把单张升级成对
+    const singles = [];
+    for (const r of [...pool.keys()].sort((a, b) => a - b)) { while (cnt(r)) singles.push(pop(r)); }
+    for (const c of singles.concat(jokers)) {
+      if (wilds.length) combos.push(combo("pair", 2, ov(c.rank), [c, wilds.pop()]));
+      else combos.push(combo("single", 1, orderValue(c.rank, level), [c]));
+    }
+    for (const wc of wilds) combos.push(combo("single", 1, orderValue(wc.rank, level), [wc]));
+    return combos;
+  }
+  function playsNeeded(hand, level) { return decompose(hand, level).length; }
+
+  function removeFrom(hand, used) {
+    const rem = hand.slice();
+    for (const u of used) {
+      for (let i = 0; i < rem.length; i++)
+        if (rem[i] === u || (rem[i].rank === u.rank && rem[i].suit === u.suit)) { rem.splice(i, 1); break; }
+    }
+    return rem;
+  }
+  function leadV2(hand, level) {
+    const plan = decompose(hand, level);
+    const nb = plan.filter((c) => !c.isBomb);
+    const pool = nb.length ? nb : plan;
+    pool.sort((a, b) => (a.rank - b.rank) || (a.length - b.length));
+    return pool[0];
+  }
+  function followV2(hand, current, ownerIsPartner, level, oppLow) {
+    if (ownerIsPartner && !oppLow) return null;
+    const resp = legalResponses(hand, current, level);
+    if (!resp.length) return null;
+    const base = playsNeeded(hand, level);
+    const nonBomb = resp.filter((m) => !m.isBomb);
+    let best = null, bestKey = null;
+    for (const m of nonBomb) {
+      const remCost = playsNeeded(removeFrom(hand, m.cards), level);
+      const key = [remCost, m.rank, m.length];
+      if (!bestKey || key[0] < bestKey[0] || (key[0] === bestKey[0] && key[1] < bestKey[1])
+          || (key[0] === bestKey[0] && key[1] === bestKey[1] && key[2] < bestKey[2])) {
+        bestKey = key; best = m;
+      }
+    }
+    if (best && (bestKey[0] <= base || oppLow)) return best;
+    if (oppLow) {
+      const bombs = resp.filter((m) => m.isBomb).sort((a, b) => cmpTuple(a.bombPower, b.bombPower));
+      if (bombs.length) return bombs[0];
+    }
+    return null;
+  }
+
+  // 建议接口：前端核心调用（使用 V2 规划型策略）
   function advise(hand, current, level, opts) {
     opts = opts || {};
     const oppLow = (opts.oppMinCards != null ? opts.oppMinCards : 99) <= 3;
     if (!current) {
-      const c = chooseLead(hand, level);
+      const c = leadV2(hand, level);
+      const plan = decompose(hand, level);
       return { action: "play", combo: c,
-        reason: "你是首家，建议先走小牌、保留炸弹：出 " + comboStr(c) };
+        reason: "你是首家，按最少 " + plan.length + " 手的计划先走小牌、保留炸弹：出 " + comboStr(c) };
     }
     const ownerIsPartner = (opts.ownerSeat != null && opts.mySeat != null &&
       opts.ownerSeat === teammate(opts.mySeat));
-    const c = chooseFollow(hand, current, ownerIsPartner, level, oppLow);
+    const c = followV2(hand, current, ownerIsPartner, level, oppLow);
     if (!c) {
       return { action: "pass", combo: null,
         reason: ownerIsPartner ? "台面是队友的牌，建议过牌不盖队友。"
@@ -330,6 +444,7 @@
   const API = {
     SUITS, RANK_NAMES, rankName, isJoker, cardStr, isWild, orderValue,
     beats, classify, genMoves, legalResponses, advise, chooseLead, chooseFollow,
+    decompose, playsNeeded, leadV2, followV2,
     comboStr, CAT_CN, card: (rank, suit) => ({ rank, suit: suit == null ? null : suit }),
   };
   if (typeof module !== "undefined" && module.exports) module.exports = API;

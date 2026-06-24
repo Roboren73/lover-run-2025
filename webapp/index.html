@@ -48,6 +48,7 @@
         <button id="clearHand" class="text-xs text-red-500">清空</button>
       </div>
       <div id="handList" class="flex flex-wrap gap-1 min-h-[2rem]"></div>
+      <div id="handGroups" class="mt-2 space-y-1"></div>
     </section>
 
     <!-- 台面牌 -->
@@ -186,6 +187,27 @@
       const hl = $("handList"); hl.innerHTML = "";
       hand.forEach((c) => hl.appendChild(chip(c, hand)));
       $("handCount").textContent = hand.length ? `(${hand.length}张)` : "";
+      // 自动组牌（即使乱序也即时理好牌型）
+      const hg = $("handGroups"); hg.innerHTML = "";
+      if (hand.length) {
+        const plan = G.decompose(hand, level);
+        const head = document.createElement("div");
+        head.className = "text-xs text-gray-500";
+        head.innerHTML = `系统已自动组牌 · 最少 <b class="text-green-700">${plan.length}</b> 手出完：`;
+        hg.appendChild(head);
+        plan.forEach((m) => {
+          const row = document.createElement("div");
+          row.className = "flex items-center gap-2 text-xs";
+          const tag = document.createElement("span");
+          tag.className = "px-1.5 py-0.5 rounded bg-green-100 text-green-700 font-semibold whitespace-nowrap";
+          tag.textContent = (G.CAT_CN[m.category] || m.category) + (m.isBomb ? "💣" : "");
+          const cards = document.createElement("span");
+          cards.className = "font-mono " + (m.isBomb ? "text-red-600 font-bold" : "text-gray-700");
+          cards.textContent = m.cards.map(G.cardStr).join(" ");
+          row.appendChild(tag); row.appendChild(cards);
+          hg.appendChild(row);
+        });
+      }
       // 台面
       const lead = $("iLead").checked;
       const tl = $("tableList"); tl.innerHTML = "";
