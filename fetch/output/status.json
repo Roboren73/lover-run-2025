@@ -1,0 +1,20 @@
+[
+  {
+    "url": "https://mp.weixin.qq.com/s/xPNaxqm1rqKunmzfPAVimw",
+    "attempts": [
+      {
+        "strategy": "direct:wechat-ios",
+        "http": 200,
+        "blocked": false,
+        "title": "94毫秒延迟、监控胜率100%！国产视频模型干翻Gemini",
+        "account": "新智元",
+        "body_len": 4212,
+        "ok": true,
+        "title_val": "94毫秒延迟、监控胜率100%！国产视频模型干翻Gemini",
+        "account_val": "新智元"
+      }
+    ],
+    "resolved": true,
+    "via": "direct:wechat-ios"
+  }
+]
