@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#15803d" />
+  <title>掼蛋出牌助手</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .card-btn { user-select: none; -webkit-tap-highlight-color: transparent; }
+    .chip { transition: transform .08s; }
+    .chip:active { transform: scale(.92); }
+  </style>
+</head>
+<body class="bg-gradient-to-b from-green-50 to-emerald-100 min-h-screen text-gray-800">
+  <header class="sticky top-0 z-10 bg-green-700 text-white shadow-md">
+    <div class="max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+      <h1 class="text-lg font-bold">🃏 掼蛋出牌助手</h1>
+      <span class="text-xs opacity-80">本地运算 · 离线可用</span>
+    </div>
+  </header>
+
+  <main class="max-w-md mx-auto px-3 py-4 space-y-4">
+    <!-- 级牌 -->
+    <section class="bg-white rounded-xl p-3 shadow">
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-semibold text-sm">当前级牌（打几）</span>
+        <span class="text-xs text-gray-500">红桃该牌=逢人配</span>
+      </div>
+      <div id="levelRow" class="grid grid-cols-7 gap-1"></div>
+    </section>
+
+    <!-- 添加目标切换 -->
+    <section class="bg-white rounded-xl p-3 shadow">
+      <div class="flex gap-2 mb-2 text-sm">
+        <button id="tgtHand" class="flex-1 py-2 rounded-lg font-semibold bg-green-600 text-white">① 点牌→我的手牌</button>
+        <button id="tgtTable" class="flex-1 py-2 rounded-lg font-semibold bg-gray-100 text-gray-600">② 点牌→台面牌</button>
+      </div>
+      <!-- 牌面板 -->
+      <div id="palette" class="space-y-1"></div>
+    </section>
+
+    <!-- 我的手牌 -->
+    <section class="bg-white rounded-xl p-3 shadow">
+      <div class="flex items-center justify-between mb-2">
+        <span class="font-semibold text-sm">我的手牌 <span id="handCount" class="text-gray-400 text-xs"></span></span>
+        <button id="clearHand" class="text-xs text-red-500">清空</button>
+      </div>
+      <div id="handList" class="flex flex-wrap gap-1 min-h-[2rem]"></div>
+    </section>
+
+    <!-- 台面牌 -->
+    <section class="bg-white rounded-xl p-3 shadow">
+      <div class="flex items-center justify-between mb-2">
+        <label class="font-semibold text-sm flex items-center gap-2">
+          <input type="checkbox" id="iLead" class="w-4 h-4 accent-green-600" />
+          我是首家（台面无牌）
+        </label>
+        <button id="clearTable" class="text-xs text-red-500">清空</button>
+      </div>
+      <div id="tableList" class="flex flex-wrap gap-1 min-h-[2rem]"></div>
+      <div id="tableType" class="mt-2 text-xs"></div>
+    </section>
+
+    <!-- 高级 -->
+    <details class="bg-white rounded-xl p-3 shadow text-sm">
+      <summary class="font-semibold cursor-pointer">高级选项</summary>
+      <label class="flex items-center justify-between mt-2">
+        <span>台面这手是队友出的</span>
+        <input type="checkbox" id="ownerPartner" class="w-4 h-4 accent-green-600" />
+      </label>
+      <label class="flex items-center justify-between mt-2">
+        <span>对手最少剩牌数</span>
+        <input type="number" id="oppMin" value="10" min="1" max="27" class="w-16 border rounded px-2 py-1 text-right" />
+      </label>
+      <p class="text-xs text-gray-400 mt-1">对手≤3张时，助手才会动用炸弹拦截。</p>
+    </details>
+
+    <button id="adviseBtn" class="w-full py-3 rounded-xl bg-green-700 text-white font-bold text-lg shadow active:scale-95 transition">
+      获取出牌建议
+    </button>
+
+    <!-- 结果 -->
+    <section id="result" class="hidden bg-white rounded-xl p-4 shadow border-2 border-green-200">
+      <div id="resAction" class="text-2xl font-bold mb-1"></div>
+      <div id="resCombo" class="font-mono text-green-800 mb-2"></div>
+      <div id="resReason" class="text-sm text-gray-600"></div>
+    </section>
+
+    <p class="text-center text-xs text-gray-400 pt-2 pb-8">
+      引擎本地运行，不联网。建议为启发式，供训练/复盘参考。
+    </p>
+  </main>
+
+  <script src="guandan.js"></script>
+  <script>
+    const G = window.Guandan;
+    const SUIT_SYM = { S: "♠", H: "♥", D: "♦", C: "♣" };
+    const RANKS = [2,3,4,5,6,7,8,9,10,11,12,13,14];
+    let level = 2;
+    let target = "hand"; // hand | table
+    let hand = [];   // [{rank,suit}]
+    let table = [];
+
+    const $ = (id) => document.getElementById(id);
+
+    // 级牌选择
+    function buildLevels() {
+      const row = $("levelRow");
+      row.innerHTML = "";
+      RANKS.forEach((r) => {
+        const b = document.createElement("button");
+        b.className = "card-btn py-1 rounded text-sm font-semibold " +
+          (r === level ? "bg-green-600 text-white" : "bg-gray-100 text-gray-700");
+        b.textContent = G.rankName(r);
+        b.onclick = () => { level = r; buildLevels(); render(); };
+        row.appendChild(b);
+      });
+    }
+
+    // 牌面板
+    function buildPalette() {
+      const p = $("palette");
+      p.innerHTML = "";
+      ["S","H","D","C"].forEach((s) => {
+        const row = document.createElement("div");
+        row.className = "grid grid-cols-13 gap-[2px]";
+        row.style.gridTemplateColumns = "repeat(13, minmax(0,1fr))";
+        const red = (s === "H" || s === "D");
+        RANKS.forEach((r) => {
+          const b = document.createElement("button");
+          b.className = "card-btn text-[11px] leading-none py-1 rounded bg-gray-50 border border-gray-200 " +
+            (red ? "text-red-600" : "text-gray-800");
+          b.textContent = SUIT_SYM[s] + G.rankName(r);
+          b.onclick = () => addCard(r, s);
+          row.appendChild(b);
+        });
+        p.appendChild(row);
+      });
+      // 王
+      const jr = document.createElement("div");
+      jr.className = "grid gap-[2px] mt-1";
+      jr.style.gridTemplateColumns = "repeat(2, minmax(0,1fr))";
+      [[16,"小王"],[17,"大王"]].forEach(([r,name]) => {
+        const b = document.createElement("button");
+        b.className = "card-btn text-xs py-1 rounded bg-yellow-50 border border-yellow-300 text-yellow-700 font-semibold";
+        b.textContent = name;
+        b.onclick = () => addCard(r, null);
+        jr.appendChild(b);
+      });
+      p.appendChild(jr);
+    }
+
+    function countOf(list, r, s) { return list.filter((c) => c.rank === r && c.suit === s).length; }
+
+    function addCard(r, s) {
+      const list = target === "hand" ? hand : table;
+      if (countOf(list, r, s) >= 2) return; // 两副牌，最多2张相同
+      list.push({ rank: r, suit: s });
+      sortList(list);
+      render();
+    }
+
+    function sortList(list) {
+      list.sort((a, b) => (a.rank - b.rank) || ((a.suit||"")< (b.suit||"") ? -1 : 1));
+    }
+
+    function chip(c, list) {
+      const red = (c.suit === "H" || c.suit === "D");
+      const joker = c.rank === 16 || c.rank === 17;
+      const el = document.createElement("button");
+      el.className = "chip px-2 py-1 rounded-lg text-sm font-semibold border " +
+        (joker ? "bg-yellow-100 border-yellow-300 text-yellow-700"
+               : (red ? "bg-red-50 border-red-200 text-red-600" : "bg-gray-100 border-gray-300 text-gray-800"));
+      el.textContent = joker ? G.rankName(c.rank) : (SUIT_SYM[c.suit] + G.rankName(c.rank));
+      el.onclick = () => { const i = list.indexOf(c); if (i >= 0) list.splice(i, 1); render(); };
+      return el;
+    }
+
+    function render() {
+      // 目标按钮
+      $("tgtHand").className = "flex-1 py-2 rounded-lg font-semibold " + (target==="hand" ? "bg-green-600 text-white":"bg-gray-100 text-gray-600");
+      $("tgtTable").className = "flex-1 py-2 rounded-lg font-semibold " + (target==="table" ? "bg-green-600 text-white":"bg-gray-100 text-gray-600");
+      // 手牌
+      const hl = $("handList"); hl.innerHTML = "";
+      hand.forEach((c) => hl.appendChild(chip(c, hand)));
+      $("handCount").textContent = hand.length ? `(${hand.length}张)` : "";
+      // 台面
+      const lead = $("iLead").checked;
+      const tl = $("tableList"); tl.innerHTML = "";
+      table.forEach((c) => tl.appendChild(chip(c, table)));
+      $("tableList").style.opacity = lead ? .4 : 1;
+      // 台面牌型分析
+      const tt = $("tableType");
+      if (lead) { tt.innerHTML = '<span class="text-green-700">首家：你可任意出牌</span>'; }
+      else if (table.length === 0) { tt.textContent = ""; }
+      else {
+        const combo = G.classify(table, level);
+        tt.innerHTML = combo
+          ? '台面牌型：<span class="font-semibold text-green-700">' + G.comboStr(combo) + "</span>"
+          : '<span class="text-red-500">⚠ 这组牌不是合法牌型</span>';
+      }
+    }
+
+    function doAdvise() {
+      if (hand.length === 0) { alert("请先添加你的手牌"); return; }
+      const lead = $("iLead").checked;
+      let current = null;
+      if (!lead) {
+        if (table.length === 0) { alert("请添加台面牌，或勾选“我是首家”"); return; }
+        current = G.classify(table, level);
+        if (!current) { alert("台面这组牌不是合法牌型，无法判断"); return; }
+      }
+      const opts = {
+        ownerSeat: $("ownerPartner").checked ? 2 : 1,
+        mySeat: 0,
+        oppMinCards: parseInt($("oppMin").value || "10", 10),
+      };
+      const rec = G.advise(hand, current, level, opts);
+      $("result").classList.remove("hidden");
+      const play = rec.action === "play";
+      $("resAction").innerHTML = play ? "✅ 出牌" : "🟡 过牌（不出）";
+      $("resAction").className = "text-2xl font-bold mb-1 " + (play ? "text-green-700" : "text-yellow-600");
+      $("resCombo").textContent = play ? G.comboStr(rec.combo) : "";
+      $("resReason").textContent = rec.reason;
+      $("result").scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    // 事件
+    $("tgtHand").onclick = () => { target = "hand"; render(); };
+    $("tgtTable").onclick = () => { target = "table"; render(); };
+    $("clearHand").onclick = () => { hand = []; render(); };
+    $("clearTable").onclick = () => { table = []; render(); };
+    $("iLead").onchange = render;
+    $("ownerPartner").onchange = () => {};
+    $("adviseBtn").onclick = doAdvise;
+
+    buildLevels();
+    buildPalette();
+    render();
+  </script>
+</body>
+</html>
