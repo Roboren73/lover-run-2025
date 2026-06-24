@@ -8,21 +8,23 @@
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
   <script src="guandan.js"></script>
   <style>
-    * { -webkit-tap-highlight-color: transparent; }
+    * { -webkit-tap-highlight-color: transparent; box-sizing:border-box; }
     body { margin:0; background:#064e3b; color:#fff; font-family:-apple-system,system-ui,sans-serif; }
     header { background:#15803d; padding:10px 14px; font-weight:700; display:flex; justify-content:space-between; align-items:center; }
-    #wrap { position:relative; width:100%; max-width:640px; margin:0 auto; }
-    #video, #overlay { width:100%; display:block; border-radius:0 0 8px 8px; }
+    #wrap { position:relative; width:100%; max-width:680px; margin:0 auto; }
+    #video, #overlay { width:100%; display:block; }
     #overlay { position:absolute; top:0; left:0; }
-    .panel { max-width:640px; margin:8px auto; padding:0 10px; }
-    .card-chip { display:inline-block; padding:3px 7px; margin:2px; border-radius:6px; font-weight:700; font-size:14px; background:#fff; color:#111; }
+    .panel { max-width:680px; margin:8px auto; padding:0 10px; }
+    .card-chip { display:inline-block; padding:3px 7px; margin:2px; border-radius:6px; font-weight:700; font-size:15px; background:#fff; color:#111; }
     .red { color:#dc2626; }
-    button { background:#16a34a; color:#fff; border:0; border-radius:10px; padding:12px 16px; font-size:16px; font-weight:700; }
+    .btns { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0; }
+    button { background:#16a34a; color:#fff; border:0; border-radius:10px; padding:11px 14px; font-size:15px; font-weight:700; }
+    button.gray { background:#475569; }
+    button.on { background:#f59e0b; }
     .group { background:#065f46; border-radius:8px; padding:8px; margin:6px 0; }
     .tag { background:#34d399; color:#064e3b; border-radius:4px; padding:1px 6px; font-weight:700; font-size:13px; }
     #advice { background:#fff; color:#064e3b; border-radius:10px; padding:12px; font-weight:700; font-size:17px; min-height:24px; }
-    #status { font-size:13px; opacity:.85; }
-    label.lv { font-size:14px; }
+    #status,#count { font-size:13px; opacity:.9; }
     select { font-size:15px; padding:4px; border-radius:6px; }
   </style>
 </head>
@@ -38,77 +40,70 @@
   </div>
 
   <div class="panel">
-    <div style="display:flex;gap:8px;align-items:center;margin:8px 0;flex-wrap:wrap">
-      <label class="lv">级牌(打几):
-        <select id="level"></select>
-      </label>
-      <button id="snap">📸 识别这一手</button>
-      <label class="lv"><input type="checkbox" id="live"> 连续识别</label>
+    <div class="btns">
+      <label>级牌(打几): <select id="level"></select></label>
+      <span id="count"></span>
+    </div>
+    <div class="btns">
+      <button id="scan" class="gray">🔁 开始扫描</button>
+      <button id="snap">📸 单张识别</button>
+      <button id="clear" class="gray">🗑 清空</button>
+    </div>
+    <div style="font-size:13px;opacity:.85;margin:4px 0">
+      建议：点「开始扫描」，把镜头<b>慢慢扫过</b>整副牌（凑近些，让每张牌的左上角数字清楚），认出的牌会自动累加。
     </div>
 
     <div>识别到的牌：<span id="cards"></span></div>
     <div id="groups"></div>
     <div style="margin:8px 0">出牌建议：</div>
-    <div id="advice">把摄像头对准你的牌，点「识别这一手」</div>
-    <p style="font-size:12px;opacity:.7">模型在手机本地运行，不上传图片。识别为辅助，供训练/复盘参考。</p>
+    <div id="advice">点「开始扫描」或「单张识别」开始</div>
+    <p style="font-size:12px;opacity:.7">模型在本地运行，不上传图片。识别为辅助，供训练/复盘参考。</p>
   </div>
 
 <script>
 const G = window.Guandan;
 const SUIT_SYM = { S:"♠", H:"♥", D:"♦", C:"♣" };
 
-// ===== 类别名：必须与训练用 data.yaml 的 names 顺序一致！=====
-// 临时占位（标准52张常见顺序）。请用 data.yaml 里的 names 替换这一行，顺序要完全一致。
-let CLASS_NAMES = ["10C","10D","10H","10S","2C","2D","2H","2S","3C","3D","3H","3S","4C","4D","4H","4S","5C","5D","5H","5S","6C","6D","6H","6S","7C","7D","7H","7S","8C","8D","8H","8S","9C","9D","9H","9S","AC","AD","AH","AS","JC","JD","JH","JS","KC","KD","KH","KS","QC","QD","QH","QS"];
+// ★ 模型输入分辨率。默认导出是 640；若你按“办法二”重导出为 1280，请把这里改成 1280。
+const INPUT = 640;
+const CONF = 0.25;     // 置信度门槛（越低越敢认，越高越保守）
+const NMS_IOU = 0.45;
 
+// 类别名：与训练 data.yaml 的 names 顺序一致（augmented-startups playing-cards）
+const CLASS_NAMES = ["10C","10D","10H","10S","2C","2D","2H","2S","3C","3D","3H","3S","4C","4D","4H","4S","5C","5D","5H","5S","6C","6D","6H","6S","7C","7D","7H","7S","8C","8D","8H","8S","9C","9D","9H","9S","AC","AD","AH","AS","JC","JD","JH","JS","KC","KD","KH","KS","QC","QD","QH","QS"];
 const RANKMAP = {A:14,K:13,Q:12,J:11,T:10,"10":10,9:9,8:8,7:7,6:6,5:5,4:4,3:3,2:2};
 function parseCardName(name){
-  const s = String(name).trim().toUpperCase();
-  if (s.includes("JOKER")||s.includes("大王")) return s.includes("B")||s.includes("RED")||s.includes("大")?G.card(17,null):G.card(16,null);
-  let m = s.match(/^(10|[2-9TAKQJ])([SHDC])$/) || s.match(/^([SHDC])(10|[2-9TAKQJ])$/);
+  const s=String(name).trim().toUpperCase();
+  let m=s.match(/^(10|[2-9TAKQJ])([SHDC])$/)||s.match(/^([SHDC])(10|[2-9TAKQJ])$/);
   if(m){ const a=m[1],b=m[2]; const r=(b in SUIT_SYM)?a:b, su=(b in SUIT_SYM)?b:a;
     if(RANKMAP[r]&&SUIT_SYM[su]) return G.card(RANKMAP[r],su); }
-  // 文字式 "10 of clubs"/"ace_of_spades"
-  const wr={ACE:14,KING:13,QUEEN:12,JACK:11,TEN:10,NINE:9,EIGHT:8,SEVEN:7,SIX:6,FIVE:5,FOUR:4,THREE:3,TWO:2};
-  const ws={SPADE:"S",HEART:"H",DIAMOND:"D",CLUB:"C"};
-  let rr=null,ss=null;
-  for(const k in wr) if(s.includes(k)) rr=wr[k];
-  for(const k in ws) if(s.includes(k)) ss=ws[k];
-  if(rr&&ss) return G.card(rr,ss);
   return null;
 }
 
-let level = 2;
+let level=2;
 function buildLevelSelect(){
   const sel=document.getElementById('level');
-  [2,3,4,5,6,7,8,9,10,11,12,13,14].forEach(r=>{
-    const o=document.createElement('option'); o.value=r; o.textContent=G.rankName(r); if(r===2)o.selected=true; sel.appendChild(o);
-  });
-  sel.onchange=()=>{ level=parseInt(sel.value); };
+  [2,3,4,5,6,7,8,9,10,11,12,13,14].forEach(r=>{ const o=document.createElement('option'); o.value=r; o.textContent=G.rankName(r); if(r===2)o.selected=true; sel.appendChild(o); });
+  sel.onchange=()=>{ level=parseInt(sel.value); renderAccum(); };
 }
 
 const video=document.getElementById('video'), overlay=document.getElementById('overlay');
 const octx=overlay.getContext('2d');
-let session=null, INPUT=640, inName='images', outName='output0';
+let session=null, inName='images', outName='output0';
 
 async function initModel(){
   try{
     session=await ort.InferenceSession.create('best.onnx',{executionProviders:['wasm']});
     inName=session.inputNames[0]; outName=session.outputNames[0];
     document.getElementById('status').textContent='模型已加载 ✅';
-  }catch(e){
-    document.getElementById('status').textContent='模型加载失败：把 best.onnx 放到同目录';
-    console.error(e);
-  }
+  }catch(e){ document.getElementById('status').textContent='模型加载失败：确认 best.onnx 已上传到 webapp/'; console.error(e); }
 }
 async function initCamera(){
-  const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});
-  video.srcObject=stream;
-  await video.play();
+  const stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:{ideal:1920},height:{ideal:1080}},audio:false});
+  video.srcObject=stream; await video.play();
   overlay.width=video.videoWidth; overlay.height=video.videoHeight;
 }
 
-// 预处理：letterbox 到 640x640，归一化，CHW
 const pre=document.createElement('canvas'); pre.width=INPUT; pre.height=INPUT;
 const pctx=pre.getContext('2d');
 function preprocess(){
@@ -117,50 +112,54 @@ function preprocess(){
   pctx.fillStyle='#727272'; pctx.fillRect(0,0,INPUT,INPUT);
   pctx.drawImage(video,0,0,w,h,dx,dy,nw,nh);
   const d=pctx.getImageData(0,0,INPUT,INPUT).data;
-  const f=new Float32Array(INPUT*INPUT*3), area=INPUT*INPUT;
+  const area=INPUT*INPUT, f=new Float32Array(area*3);
   for(let i=0;i<area;i++){ f[i]=d[i*4]/255; f[i+area]=d[i*4+1]/255; f[i+2*area]=d[i*4+2]/255; }
-  return {tensor:new ort.Tensor('float32',f,[1,3,INPUT,INPUT]), scale,dx,dy};
+  return {tensor:new ort.Tensor('float32',f,[1,3,INPUT,INPUT]),scale,dx,dy};
 }
-function iou(a,b){
-  const x1=Math.max(a[0],b[0]),y1=Math.max(a[1],b[1]),x2=Math.min(a[2],b[2]),y2=Math.min(a[3],b[3]);
-  const i=Math.max(0,x2-x1)*Math.max(0,y2-y1);
-  const ua=(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-i;
-  return ua>0?i/ua:0;
-}
-function nms(dets,thr){
-  dets.sort((a,b)=>b.score-a.score); const keep=[];
-  for(const d of dets){ if(keep.every(k=>k.cls!==d.cls||iou(k.box,d.box)<thr)) keep.push(d); }
-  return keep;
-}
+function iou(a,b){const x1=Math.max(a[0],b[0]),y1=Math.max(a[1],b[1]),x2=Math.min(a[2],b[2]),y2=Math.min(a[3],b[3]);
+  const i=Math.max(0,x2-x1)*Math.max(0,y2-y1); const u=(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-i; return u>0?i/u:0;}
+function nms(d,thr){d.sort((a,b)=>b.score-a.score);const k=[];for(const x of d){if(k.every(y=>y.cls!==x.cls||iou(y.box,x.box)<thr))k.push(x);}return k;}
 
 async function detect(){
   if(!session) return [];
   const {tensor,scale,dx,dy}=preprocess();
   const out=await session.run({[inName]:tensor});
-  const o=out[outName]; const data=o.data; const dims=o.dims; // [1, 4+nc, N]
-  const nc=CLASS_NAMES.length, N=dims[2], stride=dims[2];
-  const dets=[];
+  const o=out[outName], data=o.data, dims=o.dims; // [1,4+nc,N]
+  const nc=CLASS_NAMES.length, N=dims[2], st=dims[2], dets=[];
   for(let i=0;i<N;i++){
     let best=0,bi=-1;
-    for(let c=0;c<nc;c++){ const v=data[(4+c)*stride+i]; if(v>best){best=v;bi=c;} }
-    if(best<0.45) continue;
-    const cx=data[0*stride+i], cy=data[1*stride+i], ww=data[2*stride+i], hh=data[3*stride+i];
-    const x1=(cx-ww/2-dx)/scale, y1=(cy-hh/2-dy)/scale, x2=(cx+ww/2-dx)/scale, y2=(cy+hh/2-dy)/scale;
-    dets.push({box:[x1,y1,x2,y2],score:best,cls:bi});
+    for(let c=0;c<nc;c++){const v=data[(4+c)*st+i]; if(v>best){best=v;bi=c;}}
+    if(best<CONF) continue;
+    const cx=data[i],cy=data[st+i],ww=data[2*st+i],hh=data[3*st+i];
+    dets.push({box:[(cx-ww/2-dx)/scale,(cy-hh/2-dy)/scale,(cx+ww/2-dx)/scale,(cy+hh/2-dy)/scale],score:best,cls:bi});
   }
-  const keep=nms(dets,0.45);
-  // 画框
+  const keep=nms(dets,NMS_IOU);
   octx.clearRect(0,0,overlay.width,overlay.height);
-  octx.lineWidth=3; octx.strokeStyle='#22d3ee'; octx.fillStyle='#22d3ee'; octx.font='18px sans-serif';
+  octx.lineWidth=3; octx.strokeStyle='#22d3ee'; octx.fillStyle='#22d3ee'; octx.font='16px sans-serif';
   const cards=[];
   for(const d of keep){
     const nm=CLASS_NAMES[d.cls]||('#'+d.cls);
     octx.strokeRect(d.box[0],d.box[1],d.box[2]-d.box[0],d.box[3]-d.box[1]);
-    octx.fillText(nm,d.box[0]+2,d.box[1]+18);
-    const card=parseCardName(nm); if(card) cards.push(card);
+    octx.fillText(nm,d.box[0]+2,Math.max(14,d.box[1]+16));
+    const c=parseCardName(nm); if(c) cards.push(c);
   }
   return cards;
 }
+
+// ===== 累积：记录每张牌在“单帧里同时出现的最多张数”(最多2，因两副牌) =====
+const accum=new Map();
+function keyOf(c){ return c.rank+(c.suit||'J'); }
+function addFrame(cards){
+  const fc=new Map();
+  for(const c of cards){ const k=keyOf(c); fc.set(k,(fc.get(k)||0)+1); }
+  for(const [k,n] of fc){ accum.set(k, Math.max(accum.get(k)||0, Math.min(n,2))); }
+}
+function accumCards(){
+  const out=[];
+  for(const [k,n] of accum){ const r=parseInt(k); const suf=k.slice(String(r).length); for(let i=0;i<n;i++) out.push(G.card(r, suf==='J'?null:suf)); }
+  return out;
+}
+function renderAccum(){ render(accumCards()); }
 
 function render(cards){
   const cont=document.getElementById('cards'); cont.innerHTML='';
@@ -170,26 +169,28 @@ function render(cards){
     el.textContent=c.suit?(SUIT_SYM[c.suit]+G.rankName(c.rank)):G.rankName(c.rank);
     cont.appendChild(el);
   });
+  document.getElementById('count').textContent = cards.length? `已识别 ${cards.length} 张` : '';
   const gv=document.getElementById('groups'); gv.innerHTML='';
   const adv=document.getElementById('advice');
-  if(!cards.length){ adv.textContent='没识别到牌，调整角度/光线再试'; return; }
-  const plan=G.decompose(cards,level);
-  plan.forEach(m=>{
+  if(!cards.length){ adv.textContent='还没识别到牌，凑近、对准、光线好一些'; return; }
+  G.decompose(cards,level).forEach(m=>{
     const div=document.createElement('div'); div.className='group';
-    div.innerHTML='<span class="tag">'+(G.CAT_CN[m.category]||m.category)+(m.isBomb?'💣':'')+'</span> '+
-      m.cards.map(G.cardStr).join(' ');
+    div.innerHTML='<span class="tag">'+(G.CAT_CN[m.category]||m.category)+(m.isBomb?'💣':'')+'</span> '+m.cards.map(G.cardStr).join(' ');
     gv.appendChild(div);
   });
   const rec=G.advise(cards,null,level,{mySeat:0});
   adv.textContent=(rec.action==='play'?'✅ ':'🟡 ')+rec.reason;
 }
 
-document.getElementById('snap').onclick=async()=>{ render(await detect()); };
-let liveTimer=null;
-document.getElementById('live').onchange=(e)=>{
-  if(e.target.checked){ liveTimer=setInterval(async()=>render(await detect()),900); }
-  else { clearInterval(liveTimer); }
+let scanTimer=null;
+document.getElementById('scan').onclick=(e)=>{
+  const btn=e.target;
+  if(scanTimer){ clearInterval(scanTimer); scanTimer=null; btn.textContent='🔁 开始扫描'; btn.className='gray'; }
+  else { btn.textContent='⏸ 停止扫描'; btn.className='on';
+    scanTimer=setInterval(async()=>{ addFrame(await detect()); renderAccum(); }, 500); }
 };
+document.getElementById('snap').onclick=async()=>{ addFrame(await detect()); renderAccum(); };
+document.getElementById('clear').onclick=()=>{ accum.clear(); octx.clearRect(0,0,overlay.width,overlay.height); render([]); };
 
 (async()=>{ buildLevelSelect(); await initModel(); try{ await initCamera(); }catch(e){ document.getElementById('status').textContent='需要允许摄像头权限'; console.error(e);} })();
 </script>
