@@ -67,8 +67,31 @@ python export_onnx.py --imgsz 960
 
 ## 四、加大小王（54 类）的完整流程
 
-详见 **`vision/加大小王方案.md`**。简述：
+详见 **`vision/加大小王方案.md`**。
+
+### 推荐：用 `gen_joker_data.py` 自动合成 + 自动打标（不用手画一个框）★
+王只是一张固定的牌，所以不必去网上找几百张图、也不必在 Roboflow 一张张手标。
+你只要拍**自己那副牌**的大小王各几张，脚本把它随机贴到各种背景上（旋转/缩放/明暗/位置随机），
+**因为是程序贴的，框的位置脚本自己知道 → 自动写出 YOLO 标注**，一键生成 200+200 张带标注数据。
+
+```text
+准备真牌图（jpg/png 都行，透明背景 PNG 抠图最好；普通牌面照也能用）：
+  cards/
+    small/   小王(黑王) 几张~十几张
+    big/     大王(红王) 几张~十几张
+可选 backgrounds/ 放些牌桌/桌面照（不给就用程序生成背景）
+```
+```powershell
+:: 各生成 200 张（含自动标注）
+python gen_joker_data.py --cards cards --backgrounds backgrounds --per-class 200 --out joker_dataset
+:: 没真牌？先验证管线能跑通（占位假牌，不能用于真训练）：
+python gen_joker_data.py --demo --per-class 20 --out joker_demo
+```
+得到的 `joker_dataset` 直接当下面第 3 步的 `--jokers`。
+
+### 备选：手动在 Roboflow 标
 1. 自己拍大王(红)/小王(黑)各几十张照片，在 Roboflow 标成两类（类名含 `small`/`big`）。
+   图片存 **JPG/PNG**，导出选 **YOLOv8 (YOLO TXT)**。
 2. 导出 YOLOv8 格式，得到一个小数据集。
 3. 合并进 52 类基础数据：
    ```powershell
