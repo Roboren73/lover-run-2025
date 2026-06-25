@@ -1,3 +1,7 @@
 __pycache__/
 *.pyc
 fetch/output/raw.html
+
+# 合成的王训练集(116M，可由 gen_joker_data.py 一键重生成，不入库)
+local_train/joker_dataset/
+local_train/joker_demo/

@@ -69,6 +69,9 @@ python export_onnx.py --imgsz 960
 
 详见 **`vision/加大小王方案.md`**。
 
+> 本项目这副牌（三A扑克 AAA）：**小王=纯黑白印刷，大王=彩色印刷**，图案相同、靠颜色区分。
+> 已用这条规律从聊天记录里自动把照片分成两类：`cards/big/`(大王彩色 8 张)、`cards/small/`(小王黑白 7 张)。
+
 ### 推荐：用 `gen_joker_data.py` 自动合成 + 自动打标（不用手画一个框）★
 王只是一张固定的牌，所以不必去网上找几百张图、也不必在 Roboflow 一张张手标。
 你只要拍**自己那副牌**的大小王各几张，脚本把它随机贴到各种背景上（旋转/缩放/明暗/位置随机），
@@ -82,12 +85,15 @@ python export_onnx.py --imgsz 960
 可选 backgrounds/ 放些牌桌/桌面照（不给就用程序生成背景）
 ```
 ```powershell
-:: 各生成 200 张（含自动标注）
-python gen_joker_data.py --cards cards --backgrounds backgrounds --per-class 200 --out joker_dataset
+:: ① 先把整张牌照自动裁成贴边牌面(去掉大圈桌面背景，框更准)
+python crop_cards.py cards cards_crop
+:: ② 用裁好的牌面各生成 200 张（含自动标注）
+python gen_joker_data.py --cards cards_crop --backgrounds backgrounds --per-class 200 --out joker_dataset
 :: 没真牌？先验证管线能跑通（占位假牌，不能用于真训练）：
 python gen_joker_data.py --demo --per-class 20 --out joker_demo
 ```
-得到的 `joker_dataset` 直接当下面第 3 步的 `--jokers`。
+得到的 `joker_dataset`(约116M，已在 .gitignore，需本地生成) 直接当下面第 3 步的 `--jokers`。
+> 提示：拍牌时尽量**平放正拍**（别斜放），裁出的牌面更干净、框更紧。
 
 ### 备选：手动在 Roboflow 标
 1. 自己拍大王(红)/小王(黑)各几十张照片，在 Roboflow 标成两类（类名含 `small`/`big`）。
