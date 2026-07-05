@@ -48,9 +48,11 @@
       <button id="scan" class="gray">🔁 开始扫描</button>
       <button id="snap">📸 单张识别</button>
       <button id="clear" class="gray">🗑 清空</button>
+      <button id="fine" class="gray">🔍 精细模式(密集手牌)</button>
     </div>
     <div style="font-size:13px;opacity:.85;margin:4px 0">
       建议：点「开始扫描」，把镜头<b>慢慢扫过</b>整副牌（凑近些，让每张牌的左上角数字清楚），认出的牌会自动累加。
+      一手牌挤在一起、角标很小时开「精细模式」——把画面切块分别识别，更慢但更准。
     </div>
 
     <div>识别到的牌：<span id="cards"></span></div>
@@ -123,11 +125,12 @@ async function initCamera(){
 
 const pre=document.createElement('canvas'); pre.width=INPUT; pre.height=INPUT;
 const pctx=pre.getContext('2d');
-function preprocess(){
-  const w=video.videoWidth,h=video.videoHeight;
-  const scale=Math.min(INPUT/w,INPUT/h), nw=w*scale, nh=h*scale, dx=(INPUT-nw)/2, dy=(INPUT-nh)/2;
+// rect: {sx,sy,sw,sh} 取视频里的哪块区域喂给模型；不传=整帧(向后兼容原行为)。
+function preprocess(rect){
+  const r=rect||{sx:0,sy:0,sw:video.videoWidth,sh:video.videoHeight};
+  const scale=Math.min(INPUT/r.sw,INPUT/r.sh), nw=r.sw*scale, nh=r.sh*scale, dx=(INPUT-nw)/2, dy=(INPUT-nh)/2;
   pctx.fillStyle='#727272'; pctx.fillRect(0,0,INPUT,INPUT);
-  pctx.drawImage(video,0,0,w,h,dx,dy,nw,nh);
+  pctx.drawImage(video,r.sx,r.sy,r.sw,r.sh,dx,dy,nw,nh);
   const d=pctx.getImageData(0,0,INPUT,INPUT).data;
   const area=INPUT*INPUT, f=new Float32Array(area*3);
   for(let i=0;i<area;i++){ f[i]=d[i*4]/255; f[i+area]=d[i*4+1]/255; f[i+2*area]=d[i*4+2]/255; }
@@ -137,9 +140,11 @@ function iou(a,b){const x1=Math.max(a[0],b[0]),y1=Math.max(a[1],b[1]),x2=Math.mi
   const i=Math.max(0,x2-x1)*Math.max(0,y2-y1); const u=(a[2]-a[0])*(a[3]-a[1])+(b[2]-b[0])*(b[3]-b[1])-i; return u>0?i/u:0;}
 function nms(d,thr){d.sort((a,b)=>b.score-a.score);const k=[];for(const x of d){if(k.every(y=>y.cls!==x.cls||iou(y.box,x.box)<thr))k.push(x);}return k;}
 
-async function detect(){
+// 只算检测框(不画、不NMS)，坐标已换算回"整段视频帧"的坐标系。
+async function detectRaw(rect){
   if(!session) return [];
-  const {tensor,scale,dx,dy}=preprocess();
+  const r=rect||{sx:0,sy:0,sw:video.videoWidth,sh:video.videoHeight};
+  const {tensor,scale,dx,dy}=preprocess(r);
   let out;
   try{ out=await session.run({[inName]:tensor}); }
   catch(e){ document.getElementById('status').textContent='识别出错: '+(e.message||e); console.error(e); return []; }
@@ -150,8 +155,13 @@ async function detect(){
     for(let c=0;c<nc;c++){const v=data[(4+c)*st+i]; if(v>best){best=v;bi=c;}}
     if(best<CONF) continue;
     const cx=data[i],cy=data[st+i],ww=data[2*st+i],hh=data[3*st+i];
-    dets.push({box:[(cx-ww/2-dx)/scale,(cy-hh/2-dy)/scale,(cx+ww/2-dx)/scale,(cy+hh/2-dy)/scale],score:best,cls:bi});
+    const lx0=(cx-ww/2-dx)/scale, ly0=(cy-hh/2-dy)/scale, lx1=(cx+ww/2-dx)/scale, ly1=(cy+hh/2-dy)/scale;
+    dets.push({box:[r.sx+lx0,r.sy+ly0,r.sx+lx1,r.sy+ly1],score:best,cls:bi});
   }
+  return dets;
+}
+// 对合并后的检测框做一次全局NMS + 画框 + 解析成 Card 列表。
+function drawAndExtract(dets){
   const keep=nms(dets,NMS_IOU);
   octx.clearRect(0,0,overlay.width,overlay.height);
   octx.lineWidth=3; octx.strokeStyle='#22d3ee'; octx.fillStyle='#22d3ee'; octx.font='16px sans-serif';
@@ -163,6 +173,33 @@ async function detect(){
     const c=parseCardName(nm); if(c) cards.push(c);
   }
   return cards;
+}
+async function detect(){ return drawAndExtract(await detectRaw()); }
+
+// ===== 精细模式：水平切块检测（密集/扇形手牌时更准）=====
+// 背景：整帧一次性缩小到模型输入尺寸(640/960)时，一手27张牌挤在一起，
+// 每张牌的角标被压缩到只剩几像素，容易漏检——同类项目(guandan-ai-coach)
+// 也踩过这个坑，靠"切块+加大重叠"解决(ROI overlap 0.18→0.32)。这里对齐做法：
+// 把画面横向切成几块(手牌是横向展开的扇形)，每块单独喂模型(角标保持更大)，
+// 再把各块的检测框换算回整帧坐标、合并后做一次全局NMS去重叠检测。
+const TILE_COLS=3, TILE_OVERLAP=0.30; // 重叠要盖住单张牌的宽度，否则骑缝的牌可能两块都识别不出
+let fineMode=false;
+function computeTiles(w,h,cols,overlapFrac){
+  const tileW=w/(cols-(cols-1)*overlapFrac);
+  const step=tileW*(1-overlapFrac);
+  const tiles=[];
+  for(let i=0;i<cols;i++){
+    const sx=Math.max(0,Math.min(i*step,w-tileW));
+    tiles.push({sx,sy:0,sw:tileW,sh:h});
+  }
+  return tiles;
+}
+async function detectTiled(){
+  if(!fineMode) return detect();          // 默认关闭=原行为，不影响现有效果
+  const w=video.videoWidth,h=video.videoHeight;
+  let all=[];
+  for(const t of computeTiles(w,h,TILE_COLS,TILE_OVERLAP)) all=all.concat(await detectRaw(t));
+  return drawAndExtract(all);
 }
 
 // ===== 累积：记录每张牌在“单帧里同时出现的最多张数”(最多2，因两副牌) =====
@@ -205,17 +242,23 @@ let scanTimer=null, busy=false;
 async function scanTick(){
   if(busy) return;            // 上一帧还没算完就跳过，避免堆积
   busy=true;
-  try{ addFrame(await detect()); renderAccum(); }
+  try{ addFrame(await detectTiled()); renderAccum(); }
   finally{ busy=false; }
 }
 document.getElementById('scan').onclick=(e)=>{
   const btn=e.target;
   if(scanTimer){ clearInterval(scanTimer); scanTimer=null; btn.textContent='🔁 开始扫描'; btn.className='gray'; }
   else { btn.textContent='⏸ 停止扫描'; btn.className='on';
-    scanTimer=setInterval(scanTick, 600); }
+    scanTimer=setInterval(scanTick, fineMode?1200:600); }   // 精细模式要跑3块，放慢扫描间隔
 };
-document.getElementById('snap').onclick=async()=>{ addFrame(await detect()); renderAccum(); };
+document.getElementById('snap').onclick=async()=>{ addFrame(await detectTiled()); renderAccum(); };
 document.getElementById('clear').onclick=()=>{ accum.clear(); octx.clearRect(0,0,overlay.width,overlay.height); render([]); };
+document.getElementById('fine').onclick=(e)=>{
+  fineMode=!fineMode;
+  e.target.className=fineMode?'on':'gray';
+  e.target.textContent=fineMode?'🔍 精细模式:开(较慢更准)':'🔍 精细模式(密集手牌)';
+  if(scanTimer){ clearInterval(scanTimer); scanTimer=setInterval(scanTick, fineMode?1200:600); }
+};
 
 (async()=>{ buildLevelSelect(); await initModel(); try{ await initCamera(); }catch(e){ document.getElementById('status').textContent='需要允许摄像头权限'; console.error(e);} })();
 </script>

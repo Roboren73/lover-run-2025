@@ -409,22 +409,45 @@
     return null;
   }
 
-  // 建议接口：前端核心调用（使用 V2 规划型策略）
+  // ---- 可插拔引擎注册表（与 guandan/engine_api.py 对应）----
+  // 现在只有 v2_plan(默认)/v1_heuristic 两个；以后要接更强的引擎(比如把
+  // DanZero+/rlcard 训练出的策略网络导出成 onnx 在浏览器里跑)，调用
+  // Guandan.registerEngine("danzero_plus", {lead(hand,level,ctx){...}, follow(hand,current,level,ctx){...}})
+  // 然后 advise(hand, current, level, {...opts, engine:"danzero_plus"}) 即可切换，
+  // camera.html 等调用点不用改。
+  const ENGINES = {
+    v2_plan: { lead: (hand, level) => leadV2(hand, level),
+              follow: (hand, current, level, ctx) => followV2(hand, current, ctx.ownerIsPartner, level, ctx.oppLow) },
+    v1_heuristic: { lead: (hand, level) => chooseLead(hand, level),
+                    follow: (hand, current, level, ctx) => chooseFollow(hand, current, ctx.ownerIsPartner, level, ctx.oppLow) },
+  };
+  function registerEngine(name, engine) { ENGINES[name] = engine; }
+  function getEngine(nameOrEngine) {
+    if (nameOrEngine && typeof nameOrEngine === "object") return nameOrEngine;
+    const eng = ENGINES[nameOrEngine || "v2_plan"];
+    if (!eng) throw new Error("未知引擎 '" + nameOrEngine + "'，可选: " + Object.keys(ENGINES).join(","));
+    return eng;
+  }
+
+  // 建议接口：前端核心调用。opts.engine 选引擎(默认 v2_plan)，不填即维持原行为。
   function advise(hand, current, level, opts) {
     opts = opts || {};
-    const oppLow = (opts.oppMinCards != null ? opts.oppMinCards : 99) <= 3;
+    const eng = getEngine(opts.engine);
+    const ctx = { mySeat: opts.mySeat, ownerSeat: opts.ownerSeat,
+                 oppMinCards: opts.oppMinCards != null ? opts.oppMinCards : 99 };
+    ctx.oppLow = ctx.oppMinCards <= 3;
     if (!current) {
-      const c = leadV2(hand, level);
+      const c = eng.lead(hand, level, ctx);
       const plan = decompose(hand, level);
       return { action: "play", combo: c,
         reason: "你是首家，按最少 " + plan.length + " 手的计划先走小牌、保留炸弹：出 " + comboStr(c) };
     }
-    const ownerIsPartner = (opts.ownerSeat != null && opts.mySeat != null &&
+    ctx.ownerIsPartner = (opts.ownerSeat != null && opts.mySeat != null &&
       opts.ownerSeat === teammate(opts.mySeat));
-    const c = followV2(hand, current, ownerIsPartner, level, oppLow);
+    const c = eng.follow(hand, current, level, ctx);
     if (!c) {
       return { action: "pass", combo: null,
-        reason: ownerIsPartner ? "台面是队友的牌，建议过牌不盖队友。"
+        reason: ctx.ownerIsPartner ? "台面是队友的牌，建议过牌不盖队友。"
                                : "无更优解或为保留炸弹，建议过牌。" };
     }
     const extra = c.isBomb ? "（对手快走完，动用炸弹拦截）" : "";
@@ -444,7 +467,7 @@
   const API = {
     SUITS, RANK_NAMES, rankName, isJoker, cardStr, isWild, orderValue,
     beats, classify, genMoves, legalResponses, advise, chooseLead, chooseFollow,
-    decompose, playsNeeded, leadV2, followV2,
+    decompose, playsNeeded, leadV2, followV2, registerEngine, getEngine,
     comboStr, CAT_CN, card: (rank, suit) => ({ rank, suit: suit == null ? null : suit }),
   };
   if (typeof module !== "undefined" && module.exports) module.exports = API;

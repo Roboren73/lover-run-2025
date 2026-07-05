@@ -51,5 +51,21 @@ const cur = G.classify([C(8, "S"), C(8, "D")], LV);
 check("压对8出对9", G.advise(hand, cur, LV, { ownerSeat: 1, mySeat: 0, oppMinCards: 10 }).combo.rank === 9);
 check("队友对8则过", G.advise(hand, cur, LV, { ownerSeat: 2, mySeat: 0, oppMinCards: 10 }).action === "pass");
 
+// 引擎可插拔：不传 engine 时行为不变；显式切到 v1_heuristic 应正常工作；未知引擎名应报错
+const rDefault = G.advise(hand, null, LV, { mySeat: 0 });
+const rV2 = G.advise(hand, null, LV, { mySeat: 0, engine: "v2_plan" });
+check("默认引擎==v2_plan(向后兼容)", G.comboStr(rDefault.combo) === G.comboStr(rV2.combo));
+const rV1 = G.advise(hand, null, LV, { mySeat: 0, engine: "v1_heuristic" });
+check("v1_heuristic可正常出建议", rV1.action === "play" && !!rV1.combo);
+let threw = false;
+try { G.advise(hand, null, LV, { engine: "not_a_real_engine" }); } catch (e) { threw = true; }
+check("未知引擎名报错", threw);
+G.registerEngine("echo_first_single", {
+  lead: (h) => ({ category: "single", length: 1, rank: h[0].rank, cards: [h[0]], isBomb: false }),
+  follow: () => null,
+});
+const rCustom = G.advise(hand, null, LV, { mySeat: 0, engine: "echo_first_single" });
+check("自定义引擎(对象形式)可直接注入", rCustom.combo.cards[0] === hand[0]);
+
 console.log(`\n结果: ${total - failed}/${total} 通过` + (failed ? ` ，${failed} 失败 ❌` : "，全部通过 ✅"));
 process.exit(failed ? 1 : 0);

@@ -81,20 +81,31 @@ def choose_follow(hand: List[Card], current: Combo, owner_is_partner: bool,
 # --------------------------------------------------------------------------
 def advise(hand: List[Card], current: Optional[Combo], level: int,
            owner_seat: Optional[int] = None, my_seat: Optional[int] = None,
-           opp_min_cards: int = 99) -> dict:
-    """返回 {'action':'play'/'pass', 'combo':Combo|None, 'reason':str}。"""
-    from strategy_v2 import lead_v2, follow_v2, decompose
-    opp_low = opp_min_cards <= 3
+           opp_min_cards: int = 99, engine="v2_plan") -> dict:
+    """返回 {'action':'play'/'pass', 'combo':Combo|None, 'reason':str}。
+
+    engine: 引擎名(见 engine_api.available_engines())或 engine_api.Engine 实例。
+    默认 "v2_plan"（现有规划型启发式）。以后想换更强的引擎(如 DanZero+/rlcard)，
+    只需 engine_api.register_engine() 注册后传 engine="新名字"，这里和前端调用点都不用改。
+    """
+    from engine_api import get_engine, GameContext
+    from strategy_v2 import decompose  # 仅用于"还需几手"的说明文字，与引擎选择无关
+
+    eng = get_engine(engine)
+    ctx = GameContext(my_seat=my_seat, owner_seat=owner_seat,
+                      opp_low=opp_min_cards <= 3, opp_min_cards=opp_min_cards)
+
     if current is None:
-        c = lead_v2(hand, level)
+        c = eng.lead(hand, level, ctx)
         plan = decompose(hand, level)
         return {"action": "play", "combo": c,
                 "reason": f"你是首家，按最少{len(plan)}手的计划先走小牌、保留炸弹：出 {c}"}
-    owner_is_partner = (owner_seat is not None and my_seat is not None
-                        and owner_seat == teammate(my_seat))
-    c = follow_v2(hand, current, owner_is_partner, level, opp_low)
+
+    ctx.owner_is_partner = (owner_seat is not None and my_seat is not None
+                            and owner_seat == teammate(my_seat))
+    c = eng.follow(hand, current, level, ctx)
     if c is None:
-        if owner_is_partner:
+        if ctx.owner_is_partner:
             return {"action": "pass", "combo": None,
                     "reason": "台面是队友的牌，建议过牌不盖队友。"}
         return {"action": "pass", "combo": None,

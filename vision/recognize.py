@@ -72,13 +72,17 @@ def detect_cards(image_path, model_path, conf=0.4):
     return cards
 
 
-def bridge_to_engine(cards, level=2):
-    """识别到的手牌 → 自动组牌 + 首家出牌建议。"""
+def bridge_to_engine(cards, level=2, engine="v2_plan"):
+    """识别到的手牌 → 自动组牌 + 首家出牌建议。
+
+    engine: 传给 play.advise() 的引擎名/实例，见 guandan/engine_api.py。
+    默认 v2_plan；以后接入更强引擎(DanZero+/rlcard 等)只需改这里的默认值
+    或在调用处传参，识别流程不用动。"""
     from play import advise           # noqa: E402
     from strategy_v2 import decompose  # noqa: E402
     from core import classify          # noqa: E402  (备用)
     plan = decompose(cards, level)
-    rec = advise(cards, None, level, my_seat=0)
+    rec = advise(cards, None, level, my_seat=0, engine=engine)
     return plan, rec
 
 
