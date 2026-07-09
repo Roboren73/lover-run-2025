@@ -99,5 +99,48 @@ G.registerEngine("echo_first_single", {
 const rCustom = G.advise(hand, null, LV, { mySeat: 0, engine: "echo_first_single" });
 check("自定义引擎(对象形式)可直接注入", rCustom.combo.cards[0] === hand[0]);
 
+// ===== 累加器（去误检投票 + 删除封顶）=====
+const { createAccumulator } = require("./accum.js");
+const fc = (obj) => new Map(Object.entries(obj)); // {"9S":1} -> Map
+
+// 1) 单帧闪现的误检(幽灵牌)不入表
+let acc = createAccumulator({ confirmFrames: 2 });
+acc.addFrame(fc({ "9S": 1, "13H": 1 }));       // 13H 是一次性误检
+acc.addFrame(fc({ "9S": 1 }));
+check("幽灵牌单帧闪现不入表", acc.counts().get("13H") === undefined);
+check("真牌连续2帧确认入表", acc.counts().get("9S") === 1);
+
+// 2) 单张识别(instant)跳过投票直接入表
+acc = createAccumulator({ confirmFrames: 2 });
+acc.addFrame(fc({ "5C": 1 }), true);
+check("instant单帧直接入表", acc.counts().get("5C") === 1);
+
+// 3) 1份升2份也要再次确认
+acc = createAccumulator({ confirmFrames: 2 });
+acc.addFrame(fc({ "9S": 1 })); acc.addFrame(fc({ "9S": 1 }));
+acc.addFrame(fc({ "9S": 2 }));
+check("升到2份前仍是1份", acc.counts().get("9S") === 1);
+acc.addFrame(fc({ "9S": 2 }));
+check("2份连续2帧后确认", acc.counts().get("9S") === 2);
+
+// 4) 删除减一份，且封顶：扫描不会自动加回
+acc.remove("9S");
+check("删除后剩1份", acc.counts().get("9S") === 1);
+acc.addFrame(fc({ "9S": 2 })); acc.addFrame(fc({ "9S": 2 }));
+check("删除封顶：不再自动回到2份", acc.counts().get("9S") === 1);
+acc.remove("9S");
+acc.addFrame(fc({ "9S": 1 })); acc.addFrame(fc({ "9S": 1 }));
+check("删到0后不再自动加回", acc.counts().get("9S") === undefined);
+
+// 5) 清空恢复一切(含封顶)
+acc.clear();
+acc.addFrame(fc({ "9S": 1 })); acc.addFrame(fc({ "9S": 1 }));
+check("清空后封顶解除、可重新累加", acc.counts().get("9S") === 1);
+
+// 6) 超过两副牌上限被截到2
+acc = createAccumulator({ confirmFrames: 1 });
+acc.addFrame(fc({ "9S": 5 }));
+check("同一张最多2份(两副牌)", acc.counts().get("9S") === 2);
+
 console.log(`\n结果: ${total - failed}/${total} 通过` + (failed ? ` ，${failed} 失败 ❌` : "，全部通过 ✅"));
 process.exit(failed ? 1 : 0);

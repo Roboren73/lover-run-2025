@@ -7,6 +7,7 @@
   <title>掼蛋 · 摄像头认牌助手</title>
   <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
   <script src="guandan.js"></script>
+  <script src="accum.js"></script>
   <style>
     * { -webkit-tap-highlight-color: transparent; box-sizing:border-box; }
     body { margin:0; background:#064e3b; color:#fff; font-family:-apple-system,system-ui,sans-serif; }
@@ -15,7 +16,8 @@
     #video, #overlay { width:100%; display:block; }
     #overlay { position:absolute; top:0; left:0; }
     .panel { max-width:680px; margin:8px auto; padding:0 10px; }
-    .card-chip { display:inline-block; padding:3px 7px; margin:2px; border-radius:6px; font-weight:700; font-size:15px; background:#fff; color:#111; }
+    .card-chip { display:inline-block; padding:3px 7px; margin:2px; border-radius:6px; font-weight:700; font-size:15px; background:#fff; color:#111; cursor:pointer; }
+    .card-chip:active { background:#fca5a5; }
     .red { color:#dc2626; }
     .btns { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0; }
     button { background:#16a34a; color:#fff; border:0; border-radius:10px; padding:11px 14px; font-size:15px; font-weight:700; }
@@ -52,6 +54,7 @@
     </div>
     <div style="font-size:13px;opacity:.85;margin:4px 0">
       建议：点「开始扫描」，把镜头<b>慢慢扫过</b>整副牌（凑近些，让每张牌的左上角数字清楚），认出的牌会自动累加。
+      扫描时同一张牌要<b>连续两帧确认</b>才入表（防误识别）；认错了就<b>点一下那张牌删除</b>，删除后不会自动加回。
       一手牌挤在一起、角标很小时开「精细模式」——把画面切块分别识别，更慢但更准。
     </div>
 
@@ -202,17 +205,18 @@ async function detectTiled(){
   return drawAndExtract(all);
 }
 
-// ===== 累积：记录每张牌在“单帧里同时出现的最多张数”(最多2，因两副牌) =====
-const accum=new Map();
+// ===== 累积：投票去误检（同一张牌需连续2帧确认才入表；单张识别直接入表）=====
+// 逻辑在 accum.js（可用 node test.js 回归）。点牌面可删除误识别，删除后本轮不自动加回。
+const acc=CardAccum.createAccumulator({confirmFrames:2, maxCount:2});
 function keyOf(c){ return c.rank+(c.suit||'J'); }
-function addFrame(cards){
+function addFrame(cards, instant){
   const fc=new Map();
   for(const c of cards){ const k=keyOf(c); fc.set(k,(fc.get(k)||0)+1); }
-  for(const [k,n] of fc){ accum.set(k, Math.max(accum.get(k)||0, Math.min(n,2))); }
+  acc.addFrame(fc, instant);
 }
 function accumCards(){
   const out=[];
-  for(const [k,n] of accum){ const r=parseInt(k); const suf=k.slice(String(r).length); for(let i=0;i<n;i++) out.push(G.card(r, suf==='J'?null:suf)); }
+  for(const [k,n] of acc.counts()){ const r=parseInt(k); const suf=k.slice(String(r).length); for(let i=0;i<n;i++) out.push(G.card(r, suf==='J'?null:suf)); }
   return out;
 }
 function renderAccum(){ render(accumCards()); }
@@ -223,6 +227,8 @@ function render(cards){
     const red=(c.suit==='H'||c.suit==='D');
     const el=document.createElement('span'); el.className='card-chip'+(red?' red':'');
     el.textContent=c.suit?(SUIT_SYM[c.suit]+G.rankName(c.rank)):G.rankName(c.rank);
+    el.title='点一下删除这张(误识别)';
+    el.onclick=()=>{ acc.remove(keyOf(c)); renderAccum(); };
     cont.appendChild(el);
   });
   document.getElementById('count').textContent = cards.length? `已识别 ${cards.length} 张` : '';
@@ -251,8 +257,8 @@ document.getElementById('scan').onclick=(e)=>{
   else { btn.textContent='⏸ 停止扫描'; btn.className='on';
     scanTimer=setInterval(scanTick, fineMode?1200:600); }   // 精细模式要跑3块，放慢扫描间隔
 };
-document.getElementById('snap').onclick=async()=>{ addFrame(await detectTiled()); renderAccum(); };
-document.getElementById('clear').onclick=()=>{ accum.clear(); octx.clearRect(0,0,overlay.width,overlay.height); render([]); };
+document.getElementById('snap').onclick=async()=>{ addFrame(await detectTiled(), true); renderAccum(); };
+document.getElementById('clear').onclick=()=>{ acc.clear(); octx.clearRect(0,0,overlay.width,overlay.height); render([]); };
 document.getElementById('fine').onclick=(e)=>{
   fineMode=!fineMode;
   e.target.className=fineMode?'on':'gray';
