@@ -60,13 +60,24 @@ def decompose(hand: List[Card], level: int) -> List[Combo]:
                                 (bomb_tier("bomb", n), ov(r))))
             pool[r] = []
 
-    # 3) 顺子(仅自然牌, 长度5, 由低到高反复抽取)
-    changed = True
-    while changed:
-        changed = False
-        for ranks, top in _windows(5):
-            if all(len(pool[r]) >= 1 for r in ranks):
-                built = [pool[r].pop() for r in ranks]
+    # 3) 顺子(长度5, 由低到高反复抽取)。允许用百搭补缺：纯自然优先，
+    #    然后才允许借 1 张、2 张百搭——一条顺子把 3~5 张零牌并成 1 手，
+    #    比把百搭留到后面升级对子(每张只省 1 手)更划算。
+    for max_wild in (0, 1, 2):
+        changed = True
+        while changed:
+            changed = False
+            for ranks, top in _windows(5):
+                missing = [r for r in ranks if not pool[r]]
+                if len(missing) > max_wild or len(missing) > len(wilds):
+                    continue
+                built = [pool[r].pop() for r in ranks if pool[r]]
+                if len(built) != 5 - len(missing):
+                    # 理论不可达，防御：把牌放回
+                    for c in built:
+                        pool[c.rank].append(c)
+                    continue
+                built += [wilds.pop() for _ in missing]
                 combos.append(Combo("straight", 5, top, built))
                 changed = True
 
@@ -106,22 +117,37 @@ def decompose(hand: List[Card], level: int) -> List[Combo]:
             built = [pool[r].pop() for _ in range(2)]
             combos.append(Combo("pair", 2, ov(r), built))
 
-    # 8) 用百搭把剩余单张升级成对子(减少手数)
+    # 8) 用百搭把剩余"自然牌"单张升级成对子(减少手数)。
+    #    王不参与：百搭不能替王，王+百搭不是合法对子(见 core.classify)，王只能单出。
     leftover_singles = []
     for r in sorted(pool.keys()):
         leftover_singles += pool[r]
         pool[r] = []
-    for c in leftover_singles + list(jokers):
+    for c in leftover_singles:
         if wilds:
             wcard = wilds.pop()
-            r = c.rank if not c.is_joker() else c.rank
             combos.append(Combo("pair", 2, ov(c.rank), [c, wcard]))
         else:
             combos.append(Combo("single", 1, order_value(c.rank, level), [c]))
+    for j in jokers:
+        combos.append(Combo("single", 1, order_value(j.rank, level), [j]))
 
     # 9) 剩余百搭单出
     for wc in wilds:
         combos.append(Combo("single", 1, order_value(wc.rank, level), [wc]))
+
+    # 10) 三带二合并：三同张 + 最小的对子 → 一手 full_house，总手数再减一。
+    triples = sorted([c for c in combos if c.category == "triple"],
+                     key=lambda c: c.rank)
+    pairs = sorted([c for c in combos if c.category == "pair"],
+                   key=lambda c: c.rank)
+    for t in triples:
+        if not pairs:
+            break
+        p = pairs.pop(0)
+        combos.remove(t)
+        combos.remove(p)
+        combos.append(Combo("full_house", 5, t.rank, t.cards + p.cards))
 
     return combos
 
@@ -142,12 +168,18 @@ def _remove(hand, used):
 
 def lead_v2(hand: List[Card], level: int) -> Combo:
     """按计划领出最该先走的牌：非炸、点数最低、优先把零散小牌走掉。"""
+    from core import classify
     plan = decompose(hand, level)
     non_bomb = [c for c in plan if not c.is_bomb]
     pool = non_bomb if non_bomb else plan
     # 低点优先；同点把短的(单/对)先走，留长牌型控场
     pool.sort(key=lambda c: (c.rank, c.length))
-    return pool[0]
+    # 安全网：绝不建议非法牌型(classify 不认的组合)——曾有王+百搭凑对的 bug
+    for c in pool:
+        if classify(c.cards, level) is not None:
+            return c
+    # 计划全非法(理论不可达)：退回逐张单出
+    return Combo("single", 1, order_value(hand[0].rank, level), [hand[0]])
 
 
 def follow_v2(hand: List[Card], current: Combo, owner_is_partner: bool,

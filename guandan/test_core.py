@@ -99,6 +99,32 @@ def run():
     check("牌堆 108 张", len(deck) == 108)
     check("牌堆含 4 张王", sum(1 for c in deck if c.is_joker()) == 4)
 
+    # --- decompose 计划质量 / 合法性（曾出过王+百搭凑非法对的 bug）---
+    from strategy_v2 import decompose, lead_v2
+    wildcard = Card(2, "H")
+    endgame = [Card(16, None), wildcard]
+    plan = decompose(endgame, LV)
+    check("王+百搭 计划全合法", all(classify(m.cards, LV) is not None for m in plan))
+    check("王+百搭 lead建议合法", classify(lead_v2(endgame, LV).cards, LV) is not None)
+    fh = decompose([C(9, "S"), C(9, "H"), C(9, "D"), C(4, "S"), C(4, "H")], LV)
+    check("999+44 并成三带二一手", len(fh) == 1 and fh[0].category == "full_house")
+    st = decompose([C(3, "S"), C(4, "D"), C(6, "C"), C(7, "S"), wildcard], LV)
+    check("34_67+百搭 组成一手顺子", len(st) == 1 and st[0].category == "straight")
+    # 随机手牌全覆盖 + 全合法（防止贪心拆解丢牌/造非法组合）
+    import random as _rnd
+    rng = _rnd.Random(7)
+    for trial in range(20):
+        dk = make_deck()
+        rng.shuffle(dk)
+        rh = dk[:27]
+        rp = decompose(rh, LV)
+        if sum(m.length for m in rp) != 27 or \
+           any(classify(m.cards, LV) is None for m in rp):
+            check(f"随机27张 第{trial}组 拆解覆盖且全合法", False)
+            break
+    else:
+        check("随机27张×20组 拆解覆盖全部牌且全部合法", True)
+
     print(f"\n结果: {check.total - check.failed}/{check.total} 通过"
           f"{'，全部通过 ✅' if check.failed == 0 else f'，{check.failed} 个失败 ❌'}")
     return check.failed == 0

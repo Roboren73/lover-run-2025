@@ -324,12 +324,19 @@
         pool.set(r, []);
       }
     }
-    // 顺子(自然, 长5)
+    // 顺子(长5)。允许百搭补缺：纯自然优先，再借1张、2张——
+    // 一条顺子把3~5张零牌并成1手，比留给对子升级(每张只省1手)划算。
     let changed = true;
-    while (changed) { changed = false;
-      for (const { ranks, top } of windows(5)) {
-        if (ranks.every((r) => cnt(r) >= 1)) {
-          combos.push(combo("straight", 5, top, ranks.map((r) => pop(r)))); changed = true;
+    for (const maxWild of [0, 1, 2]) {
+      changed = true;
+      while (changed) { changed = false;
+        for (const { ranks, top } of windows(5)) {
+          const missing = ranks.filter((r) => cnt(r) < 1);
+          if (missing.length > maxWild || missing.length > wilds.length) continue;
+          const built = [];
+          for (const r of ranks) if (cnt(r) >= 1) built.push(pop(r));
+          for (let i = 0; i < missing.length; i++) built.push(wilds.pop());
+          combos.push(combo("straight", 5, top, built)); changed = true;
         }
       }
     }
@@ -359,14 +366,27 @@
     // 对子
     for (const r of [...pool.keys()].sort((a, b) => a - b))
       while (cnt(r) >= 2) combos.push(combo("pair", 2, ov(r), [pop(r), pop(r)]));
-    // 用百搭把单张升级成对
+    // 用百搭把剩余"自然牌"单张升级成对。王不参与：百搭不能替王，
+    // 王+百搭不是合法对子(classify 会拒绝)，王只能单出。
     const singles = [];
     for (const r of [...pool.keys()].sort((a, b) => a - b)) { while (cnt(r)) singles.push(pop(r)); }
-    for (const c of singles.concat(jokers)) {
+    for (const c of singles) {
       if (wilds.length) combos.push(combo("pair", 2, ov(c.rank), [c, wilds.pop()]));
       else combos.push(combo("single", 1, orderValue(c.rank, level), [c]));
     }
+    for (const j of jokers) combos.push(combo("single", 1, orderValue(j.rank, level), [j]));
     for (const wc of wilds) combos.push(combo("single", 1, orderValue(wc.rank, level), [wc]));
+
+    // 三带二合并：三同张 + 最小的对子 → full_house，总手数再减一
+    const triples = combos.filter((c) => c.category === "triple").sort((a, b) => a.rank - b.rank);
+    const pairs2 = combos.filter((c) => c.category === "pair").sort((a, b) => a.rank - b.rank);
+    for (const t of triples) {
+      if (!pairs2.length) break;
+      const p = pairs2.shift();
+      combos.splice(combos.indexOf(t), 1);
+      combos.splice(combos.indexOf(p), 1);
+      combos.push(combo("full_house", 5, t.rank, t.cards.concat(p.cards)));
+    }
     return combos;
   }
   function playsNeeded(hand, level) { return decompose(hand, level).length; }
@@ -384,7 +404,9 @@
     const nb = plan.filter((c) => !c.isBomb);
     const pool = nb.length ? nb : plan;
     pool.sort((a, b) => (a.rank - b.rank) || (a.length - b.length));
-    return pool[0];
+    // 安全网：绝不建议非法牌型——曾有王+百搭凑对的 bug
+    for (const c of pool) if (classify(c.cards, level)) return c;
+    return combo("single", 1, orderValue(hand[0].rank, level), [hand[0]]);
   }
   function followV2(hand, current, ownerIsPartner, level, oppLow) {
     if (ownerIsPartner && !oppLow) return null;

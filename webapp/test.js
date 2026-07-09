@@ -51,6 +51,38 @@ const cur = G.classify([C(8, "S"), C(8, "D")], LV);
 check("压对8出对9", G.advise(hand, cur, LV, { ownerSeat: 1, mySeat: 0, oppMinCards: 10 }).combo.rank === 9);
 check("队友对8则过", G.advise(hand, cur, LV, { ownerSeat: 2, mySeat: 0, oppMinCards: 10 }).action === "pass");
 
+// decompose 计划质量/合法性（曾出过王+百搭凑非法对的 bug）
+const wild2 = C(2, "H");
+const endgame = [G.card(16, null), wild2];
+const eplan = G.decompose(endgame, LV);
+check("王+百搭 计划全合法", eplan.every((m) => G.classify(m.cards, LV) !== null));
+check("王+百搭 lead建议合法", G.classify(G.leadV2(endgame, LV).cards, LV) !== null);
+const fhp = G.decompose([C(9, "S"), C(9, "H"), C(9, "D"), C(4, "S"), C(4, "H")], LV);
+check("999+44 并成三带二一手", fhp.length === 1 && fhp[0].category === "full_house");
+const stp = G.decompose([C(3, "S"), C(4, "D"), C(6, "C"), C(7, "S"), wild2], LV);
+check("34_67+百搭 组成一手顺子", stp.length === 1 && stp[0].category === "straight");
+// 随机手牌×20：拆解覆盖全部牌且全部合法
+(function(){
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648;
+  const RANKS = [];
+  for (let r = 2; r <= 14; r++) RANKS.push(r);
+  for (let trial = 0; trial < 20; trial++) {
+    const deck = [];
+    for (let d = 0; d < 2; d++) {
+      for (const s of ["S","H","D","C"]) for (const r of RANKS) deck.push(G.card(r, s));
+      deck.push(G.card(16, null)); deck.push(G.card(17, null));
+    }
+    for (let i = deck.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [deck[i], deck[j]] = [deck[j], deck[i]]; }
+    const rh = deck.slice(0, 27);
+    const rp = G.decompose(rh, LV);
+    const covered = rp.reduce((s, m) => s + m.length, 0) === 27;
+    const legal = rp.every((m) => G.classify(m.cards, LV) !== null);
+    if (!covered || !legal) { check(`随机27张 第${trial}组 拆解覆盖且全合法`, false); return; }
+  }
+  check("随机27张×20组 拆解覆盖全部牌且全部合法", true);
+})();
+
 // 引擎可插拔：不传 engine 时行为不变；显式切到 v1_heuristic 应正常工作；未知引擎名应报错
 const rDefault = G.advise(hand, null, LV, { mySeat: 0 });
 const rV2 = G.advise(hand, null, LV, { mySeat: 0, engine: "v2_plan" });
